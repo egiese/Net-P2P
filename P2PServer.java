@@ -32,7 +32,7 @@ public class P2PServer
 			System.out.println("Sender IP address: " + ip);
 			System.out.println("Sender port: " + clientPort);
 			System.out.println("Packet size: " + rcvpktsize);
-			System.out.println("Sender message: {" + message + "}");
+			System.out.println("Sender message: {\n" + message + "}\n");
 			System.out.println("Message size: " + message.length());
 		}
 	
