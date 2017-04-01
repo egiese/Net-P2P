@@ -22,7 +22,7 @@ public class P2PServer
 		incPackets = new ArrayList<String>();
 		
 		System.out.println("UDP Server Port opened on port " + PORT);
-		byte[] rcvData = new byte[1024];
+		byte[] rcvData = new byte[100];
 		
 		DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 		DatagramPacket sendPkt = null;
@@ -37,18 +37,22 @@ public class P2PServer
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
 			String message = new String(rcvPkt.getData());
-			incPackets.add(message);
+			
+			incPackets.add(message.substring(3, rcvpktsize));
+
+			
 			int sequenceNum = getACK(message);
 			
 			String totalMsg = combinePackets(incPackets);
 			
+			
+			/*
 			System.out.println("sequence number = " + sequenceNum);
 			System.out.println("Sender IP address: " + clientIP);
 			System.out.println("Sender port: " + clientPort);
 			System.out.println("Packet size: " + rcvpktsize);
-			System.out.println("Sender message: \n{\n" + message + "\n}");
+			*/
 			
-			//System.out.println("Message size: " + message.length() + "\n");
 			
 			
 			
@@ -64,11 +68,28 @@ public class P2PServer
 			
 			
 			
+			
+			
+			// Debugging & printing //
+			System.out.println("Sender message: \n{\n" + message + "\n}");
+			System.out.println("Packet size: " + rcvpktsize + "\n");
+			
+			System.out.println("msg substring: \n{\n" + message.substring(3, rcvpktsize) + "\n}");
+			System.out.println("substring size: " + message.substring(3, rcvpktsize).length() + "\n");
 		
-			System.out.println("ArrayList total message = \n{\n" + totalMsg + "\n}");
+			System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
+			System.out.println("arraylist item size: " + totalMsg.length() + "\n");
 			
 		}
 	}
+	
+	
+	public static void parseMsg(String msg)
+	{
+		
+		
+	}
+	
 	
 	
 	public static String combinePackets(ArrayList<String> packets)
