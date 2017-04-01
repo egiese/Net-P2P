@@ -4,29 +4,29 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class P2PServer
 {
-	final static int PORT = 5555;
-	final static int CLI_PORT = 6666;
+	final static int PORT = 5666;
 	final static String serverHostname = "localhost";
-	final static String clientHostname = "localhost";
 	private static Scanner scan;
 	private static DatagramSocket srvSkt;
-	private static DatagramSocket cliSkt;
+	private static ArrayList<String> incPackets;
 	
 
 	public static void main (String [] args) throws IOException
 	{
 		srvSkt = new DatagramSocket(PORT);
-		
+		incPackets = new ArrayList<String>();
 		
 		System.out.println("UDP Server Port opened on port " + PORT);
 		byte[] rcvData = new byte[1024];
 		
 		DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 		DatagramPacket sendPkt = null;
+		
 		
 		while(true)
 		{
@@ -37,28 +37,50 @@ public class P2PServer
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
 			String message = new String(rcvPkt.getData());
+			incPackets.add(message);
 			int sequenceNum = getACK(message);
+			
+			String totalMsg = combinePackets(incPackets);
+			
+			System.out.println("sequence number = " + sequenceNum);
+			System.out.println("Sender IP address: " + clientIP);
+			System.out.println("Sender port: " + clientPort);
+			System.out.println("Packet size: " + rcvpktsize);
+			System.out.println("Sender message: \n{\n" + message + "\n}");
+			
+			//System.out.println("Message size: " + message.length() + "\n");
+			
+			
 			
 			
 			// ACKing packets //
 			System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
 			String ACK = createACK(sequenceNum);
-			cliSkt = new DatagramSocket(CLI_PORT);
 			byte[] sendData = new byte[ACK.length()];
-			System.out.println("sendData size = " + sendData.length);
+			//System.out.println("sendData size = " + sendData.length);
 			sendData = ACK.getBytes();
 			sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, clientPort);
-			cliSkt.send(sendPkt);
+			srvSkt.send(sendPkt);
 			
 			
-			System.out.println("sequence number = " + sequenceNum);
-			System.out.println("rcvPkt: " + rcvPkt.getData());
-			System.out.println("Sender IP address: " + clientIP);
-			System.out.println("Sender port: " + clientPort);
-			System.out.println("Packet size: " + rcvpktsize);
-
+			
+		
+			System.out.println("ArrayList total message = \n{\n" + totalMsg + "\n}");
+			
 		}
 	}
+	
+	
+	public static String combinePackets(ArrayList<String> packets)
+	{
+		String msg = "";
+		
+		for(String packet : packets)
+			msg += packet;
+		
+		return msg;
+	}
+	
 
 	public static int getACK(String packet)
 	{
