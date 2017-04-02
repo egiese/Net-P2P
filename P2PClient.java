@@ -2,41 +2,81 @@ import java.io.File;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class P2PClient
 {
-	final static int PORT = 5555;
+	final static int PORT = 5666;
+	final static int CLI_PORT = 6666;
 	final static int MTU = 128;
 	final static int IPHEAD = 20;
 	final static int UDPHEAD = 8;
-	final static int MSGHEAD = 3;
 	final static int SEQ = 3;
-	final static String serverHostname = "10.0.0.44";
-	final static String clientHostname = "localhost";
+	final static String serverHostname = "localhost";
+
 	private static Scanner scan;
-	private static DatagramSocket dgSkt;
+	private static DatagramSocket sendSkt;
 	
 	public static void main (String [] args) throws Exception
 	{	
 		InetAddress serverIP = InetAddress.getByName(serverHostname);
 		
-		dgSkt = new DatagramSocket();
+		sendSkt = new DatagramSocket();
+		byte[] rcvData = new byte[1024];
+		
+		
 		
 		System.out.println("Attempting to send to " + serverIP + " via UDP");
 		
-		String message = genReqMsg(1);
+		String message = genReqMsg(2);
 		String[] packets = makePacket(message);
-			
 		
 		for(String p : packets)
 		{
+			System.out.println(p);
+			System.out.println("packet length = " + p.length());
+		}
+
+		for(String p : packets)
+		{
+			// Sending packets //
 			byte[] sendData = new byte[p.length()];
 			System.out.println("sendData size = " + sendData.length);
 			sendData = p.getBytes();
-			DatagramPacket dgPkt = new DatagramPacket(sendData, sendData.length, serverIP, PORT);
-			dgSkt.send(dgPkt);
+			DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, PORT);
+			sendSkt.send(sendPkt);
+			System.out.println("Waiting for ACK...");
+			
+			
+			// Receiving ACKs //
+			DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+			sendSkt.receive(rcvPkt);
+			int rcvpktsize = rcvPkt.getLength();
+			InetAddress clientIP = rcvPkt.getAddress();
+			int clientPort = rcvPkt.getPort();
+			String ACK = new String(rcvPkt.getData());
+			int sequenceNum = getACK(ACK);
+			
+			System.out.println("sequence number = " + sequenceNum);
+			System.out.println("rcvPkt: " + rcvPkt.getData());
+			System.out.println("Sender IP address: " + clientIP);
+			System.out.println("Sender port: " + clientPort);
+			System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
 		}
+	}
+	
+	
+	
+	public static int getACK(String packet)
+	{
+		return Character.getNumericValue(packet.charAt(0));
+	}
+	
+	public static String createACK(int sequenceNumber)
+	{
+		String msg = "" + sequenceNumber;
+		return msg;
 	}
 	
 	
@@ -57,11 +97,12 @@ public class P2PClient
 	public static String genReqMsg(int flag) throws Exception
 	{
 		scan = new Scanner(System.in);
-		String msg = flag + " " + InetAddress.getByName(clientHostname) + "\r\n";	
+		String msg = "";
 		
 		/* Inform and update server with shared MP3s */
 		if(flag == 1)
 		{
+			msg += "INUP" + " " + InetAddress.getLocalHost() + "\r\n";
 			File folder = new File("C:/Users/Kookus/Documents/CCSU/Spring 2017/CS 490 - Networking/SharedFiles");
 			File[] sharedFiles = folder.listFiles();
 			
@@ -72,13 +113,17 @@ public class P2PClient
 		/* Query server for one file or entire directory */
 		else if(flag == 2)
 		{
+			msg += "QUER" + " " + InetAddress.getLocalHost() + "\r\n";
 			System.out.println("Name of file to query? (Or type -showall to view entire directory");
 			String input = scan.next();
 			msg += input + "\r\n";
 		}
 		
 		else if(flag == 3)
+		{
+			msg += "EXIT" + " " + InetAddress.getLocalHost() + "\r\n";
 			msg += "$$$$$$$$";
+		}
 		
 		msg += "\r\n";
 		
@@ -98,8 +143,16 @@ public class P2PClient
 	{
 		int payloadSize = MTU - IPHEAD - UDPHEAD - SEQ;
 		int numPackets = msg.length() / payloadSize;
+		
+		System.out.println("num packets = " + numPackets);
+		System.out.println("payloadSize = " + payloadSize);
+		System.out.println("msg size = " + msg.length());
+		
+		
 		if( (msg.length() % payloadSize) != 0)
 			numPackets++;
+		
+		System.out.println("num packets = " + numPackets + "\n\n");
 		
 		return numPackets;
 	}
