@@ -13,6 +13,7 @@ public class P2PServer
 	private static Scanner scan;
 	private static DatagramSocket srvSkt;
 	private static ArrayList<String> incPackets;
+	private static Scanner seq;
 	
 
 	public static void main (String [] args) throws IOException
@@ -33,28 +34,20 @@ public class P2PServer
 			System.out.println("Waiting for packet on port " + PORT + "...\n");
 			srvSkt.receive(rcvPkt);
 			int rcvpktsize = rcvPkt.getLength();
-			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
+			InetAddress clientIP = rcvPkt.getAddress();
 			String message = new String(rcvPkt.getData());
-			
-			incPackets.add(message.substring(3, rcvpktsize));
-
+			scan = new Scanner(message);
+			int headerLength = scan.nextLine().length() + 2;
+			incPackets.add(message.substring(headerLength, rcvpktsize));
 			int sequenceNum = getSeqNum(message);
 			String totalMsg = combinePackets(incPackets);
-			
-			/*
-			System.out.println("sequence number = " + sequenceNum);
-			System.out.println("Sender IP address: " + clientIP);
-			System.out.println("Sender port: " + clientPort);
-			System.out.println("Packet size: " + rcvpktsize);
-			*/
 
 			
 			// ACKing packets //
 			System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
-			String ACK = createACK(sequenceNum);
+			String ACK = InetAddress.getLocalHost() + createACK(sequenceNum);
 			byte[] sendData = new byte[ACK.length()];
-			//System.out.println("sendData size = " + sendData.length);
 			sendData = ACK.getBytes();
 			sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, clientPort);
 			srvSkt.send(sendPkt);
@@ -64,9 +57,6 @@ public class P2PServer
 			// Debugging & printing //
 			System.out.println("Sender message: \n{\n" + message + "\n}");
 			System.out.println("Packet size: " + rcvpktsize + "\n");
-			
-			System.out.println("msg substring: \n{\n" + message.substring(3, rcvpktsize) + "\n}");
-			System.out.println("substring size: " + message.substring(3, rcvpktsize).length() + "\n");
 		
 			System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
 			System.out.println("arraylist item size: " + totalMsg.length() + "\n");
@@ -154,7 +144,11 @@ public class P2PServer
 	 */
 	public static int getSeqNum(String packet)
 	{
-		return Character.getNumericValue(packet.charAt(0));
+		seq = new Scanner(packet);
+		seq.next();
+		seq.next();
+		
+		return Integer.parseInt(seq.next());
 	}
 	
 	
@@ -167,7 +161,7 @@ public class P2PServer
 	 */
 	public static String createACK(int sequenceNumber)
 	{
-		return "" + sequenceNumber + "\r\n\r\n";
+		return " 1 " + sequenceNumber + "\r\n\r\n";
 	}
 	
 	
