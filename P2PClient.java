@@ -13,10 +13,12 @@ public class P2PClient
 	final static int IPHEAD = 20;
 	final static int UDPHEAD = 8;
 	final static int SEQ = 3;
+	final static int APPHEADER = 5;
 	final static String serverHostname = "localhost";
 
 	private static Scanner scan;
 	private static DatagramSocket sendSkt;
+	private static Scanner seq;
 	
 	public static void main (String [] args) throws Exception
 	{	
@@ -29,20 +31,14 @@ public class P2PClient
 		
 		System.out.println("Attempting to send to " + serverIP + " via UDP");
 		
-		String message = genReqMsg(2);
+		String message = genReqMsg(1);
 		String[] packets = makePacket(message);
 		
-		for(String p : packets)
-		{
-			System.out.println(p);
-			System.out.println("packet length = " + p.length());
-		}
 
 		for(String p : packets)
 		{
 			// Sending packets //
 			byte[] sendData = new byte[p.length()];
-			System.out.println("sendData size = " + sendData.length);
 			sendData = p.getBytes();
 			DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, PORT);
 			sendSkt.send(sendPkt);
@@ -52,14 +48,15 @@ public class P2PClient
 			// Receiving ACKs //
 			DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 			sendSkt.receive(rcvPkt);
+			String ack = new String(rcvPkt.getData());
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
 			String ACK = new String(rcvPkt.getData());
-			int sequenceNum = getACK(ACK);
+			int sequenceNum = getSeqNum(ACK);
 			
+			System.out.println("ACK = " + ack);
 			System.out.println("sequence number = " + sequenceNum);
-			System.out.println("rcvPkt: " + rcvPkt.getData());
 			System.out.println("Sender IP address: " + clientIP);
 			System.out.println("Sender port: " + clientPort);
 			System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
@@ -68,16 +65,20 @@ public class P2PClient
 	
 	
 	
-	public static int getACK(String packet)
+	public static int getSeqNum(String packet)
 	{
-		return Character.getNumericValue(packet.charAt(0));
+		seq = new Scanner(packet);
+		seq.next();
+		seq.next();
+		
+		return Integer.parseInt(seq.next());
 	}
 	
 	public static String createACK(int sequenceNumber)
 	{
-		String msg = "" + sequenceNumber;
-		return msg;
+		return " 1 " + sequenceNumber + "\r\n\r\n";
 	}
+	
 	
 	
 	/*
@@ -139,9 +140,10 @@ public class P2PClient
 	 * Method returns the number of packets as integer
 	 * ---------------------------------------------------------------------------------------------
 	 */
-	public static int getNumPackets(String msg)
+	public static int getNumPackets(String msg) throws Exception
 	{
-		int payloadSize = MTU - IPHEAD - UDPHEAD - SEQ;
+		String header = InetAddress.getLocalHost() + " 0 ";
+		int payloadSize = MTU - IPHEAD - UDPHEAD - SEQ - header.length();
 		int numPackets = msg.length() / payloadSize;
 		
 		System.out.println("num packets = " + numPackets);
@@ -167,10 +169,10 @@ public class P2PClient
 	 * Method returns a String array containing each packet
 	 * ---------------------------------------------------------------------------------------------
 	 */
-	public static String[] makePacket(String msg)
+	public static String[] makePacket(String msg) throws Exception
 	{
-		
-		int payloadSize = MTU - IPHEAD - UDPHEAD - SEQ;
+		String header = InetAddress.getLocalHost() + " 0 ";
+		int payloadSize = MTU - IPHEAD - UDPHEAD - SEQ - header.length();
 		int numPackets = getNumPackets(msg);
 		int currentPacket = 1;
 		
@@ -179,10 +181,10 @@ public class P2PClient
 		for(int i = 0; i < numPackets; i++)
 		{
 			if(i == numPackets - 1)
-				packets[i] = i%2 + "\r\n" + msg.substring(i * payloadSize, msg.length() );
+				packets[i] = header + i%2 + "\r\n" + msg.substring(i * payloadSize, msg.length() );
 			
 			else
-				packets[i] = i%2 + "\r\n" + msg.substring(i * payloadSize, (currentPacket * payloadSize) );
+				packets[i] = header + i%2 + "\r\n" + msg.substring(i * payloadSize, (currentPacket * payloadSize) );
 			
 			currentPacket++;
 		}
