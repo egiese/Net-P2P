@@ -13,6 +13,7 @@ public class P2PServer
 	private static Scanner scan;
 	private static DatagramSocket srvSkt;
 	private static ArrayList<String> incPackets;
+	private static ArrayList<Peer> peers;
 	private static Scanner seq;
 	
 
@@ -20,6 +21,7 @@ public class P2PServer
 	{
 		srvSkt = new DatagramSocket(PORT);
 		incPackets = new ArrayList<String>();
+		peers = new ArrayList<Peer>();
 		
 		System.out.println("UDP Server Port opened on port " + PORT);
 		byte[] rcvData = new byte[100];
@@ -42,7 +44,7 @@ public class P2PServer
 			incPackets.add(message.substring(headerLength, rcvpktsize));
 			int sequenceNum = getSeqNum(message);
 			String totalMsg = combinePackets(incPackets);
-
+			
 			
 			// ACKing packets //
 			System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
@@ -55,8 +57,8 @@ public class P2PServer
 			
 		
 			// Debugging & printing //
-			System.out.println("Sender message: \n{\n" + message + "\n}");
-			System.out.println("Packet size: " + rcvpktsize + "\n");
+			//System.out.println("Sender message: \n{\n" + message + "\n}");
+			//System.out.println("Packet size: " + rcvpktsize + "\n");
 		
 			System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
 			System.out.println("arraylist item size: " + totalMsg.length() + "\n");
@@ -79,36 +81,62 @@ public class P2PServer
 	 * If the method header was not understood, then the server will construct an error message
 	 * ---------------------------------------------------------------------------------------------
 	 */	
-	public static void parseMsg(String msg)
+	public static String parseMsg(String msg) throws Exception
 	{
 		scan = new Scanner(msg);
 
 		String method = scan.next();
-		String hostname = scan.next();
-		
-		// Flush scanner to next line
-		scan.nextLine();
-		
-		
+		String hostInfo = scan.next();
+
 		if(method.equals("INUP"))
 		{
-			//add all files to hash of key (hostname) -> value (song information - String)
-			
+			//add all files to hash of (key, value) -> (hostname, song info)
+			peers.add(new Peer(hostInfo, msg));
+			return genRspMsg(method);
 		}
 		else if(method.equals("QUER"))
 		{
-			//scan entire hashmap, looking at first scan.next() String for songname
+			//scan entire hashmap, looking at first scan.next() String for song name
+
+			String queryName = scan.nextLine();
+			String queryResponse = "";
+			String search;
 			
+			for(Peer peer : peers)
+			{
+				if(!(search = peer.searchHash(queryName)).equals("File not found"))
+					queryResponse += search + "\r\n";
+				
+			}
+			
+			//do something here with the response message.
+			return genRspMsg(method) + queryResponse;
 		}
 		else if(method.equals("EXIT"))
 		{
 			//check hash for host, delete all values
-			
+			Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
+			String hostname = hostScan.next();
+			String IPAddress = hostScan.next();
+			int removeIndex = 0;
+
+			for(Peer peer : peers)
+			{
+				if(peer.getHost().equals(hostname) && peer.getIP().equals(IPAddress))
+				{
+					peers.remove(removeIndex);
+					break;
+				}
+				else
+					removeIndex++;				
+			}
+		
+			return genRspMsg(method);
 		}
 		else
 		{
 			//error//
-			
+			return genRspMsg("");
 		}
 	}
 	
