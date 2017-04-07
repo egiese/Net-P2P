@@ -3,15 +3,25 @@ import java.util.Scanner;
 
 public class Peer
 {
-    int numEntries;
-    LinkedList<String>[] hashMap;
-    Scanner scan;
+    private static int numEntries;
+    private LinkedList<String>[] hashMap;
+    private Scanner scan;
+    private Scanner hostScan;
+    private Scanner songScan;
+    private String hostname;
+    private String IPAddress;
+	
     
-    public Peer(String inform)
+    public Peer(String hostInfo, String inform)
     {
-        numEntries = 107;
+    	numEntries = 107;
+    	hostScan = new Scanner(hostInfo).useDelimiter("/");
+    	scan = new Scanner(inform);
+    	// Flush scanner
+    	scan.nextLine();
+    	hostname = hostScan.next();
+    	IPAddress = hostScan.next();
         hashMap = new LinkedList[numEntries];
-        scan = new Scanner(inform);
         
         for(int i = 0; i < numEntries; i++)
             hashMap[i] = new LinkedList<String>();
@@ -26,6 +36,16 @@ public class Peer
         }
     }
     
+    public String getHost()
+    {
+    	return hostname;
+    }
+    
+    public String getIP()
+    {
+    	return IPAddress;
+    }
+    
     public void printHash()
     {
         for(int i = 0; i < numEntries; i++)
@@ -33,12 +53,12 @@ public class Peer
                 System.out.println(song);
     }
     
-    public String searchHash(String key)
+    public String searchHash(String query)
     {
         String allFiles = "all_files";
         String files = "";
         
-        if(key.equals(allFiles))
+        if(query.equals(allFiles))
         {
             for(int i = 0; i < numEntries; i++)
             {
@@ -48,11 +68,19 @@ public class Peer
             return files;
         }
         else
+        {
             for(int i = 0; i < numEntries; i++)
+            {
                 for(String song : hashMap[i])
-                    if(song.contains(key))
-                        return song;
-                        
+                {
+                	songScan = new Scanner(song);
+                	String fileName = songScan.next();
+                    if(fileName.contains(query))
+                    	return song;
+    			}
+            }
+        }
+        
         return "File not found";
     }
 }
