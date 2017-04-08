@@ -48,7 +48,7 @@ public class P2PServer
 			
 			if(currSeqNum != sequenceNum)
 			{
-				System.out.println("Wrong sequence number.\nExpected " + currSeqNum + "got " + sequenceNum + ".");
+				System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
 				continue;
 			}
 			
