@@ -71,7 +71,7 @@ import java.util.Timer;
                 {
                     double endTime = System.nanoTime() / 1000000;
                     System.out.println("Timeout!");
-                    // recalculate estRTT,
+                    // recalculate timeout interval,
                     devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
                     estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
                     timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
@@ -82,7 +82,7 @@ import java.util.Timer;
                 }
                 double endTime = System.nanoTime() / 1000000;
                 System.out.println("ACK received!");
-                // recalculate estRTT,
+                // Recalculate timeout interval
                 devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
                 estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
                 timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
@@ -131,8 +131,6 @@ import java.util.Timer;
         double dRTT = ((1 - beta) * devRTT) + (beta * Math.abs(sRTT - estimatedRTT));
         return dRTT;
     }
-
-
 
 	public static int getSeqNum(String packet)
 	{
