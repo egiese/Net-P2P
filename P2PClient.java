@@ -1,11 +1,12 @@
+public class P2PClient
+
 import java.io.File;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Scanner;
-
-public class P2PClient
+import java.util.Timer;
 {
 	final static int PORT = 5666;
 	final static int CLI_PORT = 6666;
@@ -14,7 +15,10 @@ public class P2PClient
 	final static int UDPHEAD = 8;
 	final static int SEQ = 3;
 	final static int APPHEADER = 5;
-    final static int INIT_EST_RTT = 100; //Note, RTT is measured in milliseconds.
+    final static double INIT_EST_RTT = 100.0; //Note, RTT is measured in milliseconds.
+    final static double INIT_DEV_RTT = 0.0;
+    final static double alpha = 0.125;
+    final static double beta = 0.25;
 	final static String serverHostname = "localhost";
 
 	private static Scanner scan;
@@ -35,6 +39,11 @@ public class P2PClient
 		String message = genReqMsg(1);
 		String[] packets = makePacket(message);
 
+        double estRTT = INIT_EST_RTT;
+        double devRTT = INIT_DEV_RTT;
+        devRTT = calcDevRTT(0.0, INIT_EST_RTT, estRTT, devRTT);
+        estRTT = calcEstimatedRTT(0.0, INIT_EST_RTT, estRTT);
+        int timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
 
 		for(String p : packets)
 		{
@@ -46,16 +55,54 @@ public class P2PClient
 			sendSkt.send(sendPkt);
 			System.out.println("Waiting for ACK...");
 
+            while(true)
+            {
+                // Receiving ACKs //
+                // Start Timer
+                socket.setSoTimeout(timeoutInterval);
+                double startTime = System.nanoTime() / 1000000;
+                DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+                try
+                {
+                    sendSkt.receive(rcvPkt);
+                    System.out.println("ACK received!");
+                    // recalculate estRTT,
+                    double endTime = System.nanoTime() / 1000000;
+                    devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
+                    estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
+                    timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
+                    // If incorrect sequence number,
+                    // resend packet,
+                    // and restart loop
 
-			// Receiving ACKs //
-			DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
-			sendSkt.receive(rcvPkt);
-			String ack = new String(rcvPkt.getData());
+                    // Turn off timer
+                    socket.setSoTimeout(0);
+                    // End loop
+                    break;
+                }
+                // If timeout,
+                catch(SocketTimeoutException e)
+                {
+                    double endTime = System.nanoTime() / 1000000;
+                    System.out.println("Timeout!");
+                    // recalculate estRTT,
+                    devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
+                    estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
+                    timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
+                    // resend packet,
+                    sendSkt.send(sendPkt);
+                    // and restart loop
+                    continue;
+                }
+            }
+
+            String ACK = new String(rcvPkt.getData());
+            int sequenceNum = getSeqNum(ACK);
+            
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
-			String ACK = new String(rcvPkt.getData());
-			int sequenceNum = getSeqNum(ACK);
+            String ack = new String(rcvPkt.getData());
 
 			System.out.println("ACK = " + ack);
 			System.out.println("sequence number = " + sequenceNum);
@@ -64,6 +111,26 @@ public class P2PClient
 			System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
 		}
 	}
+
+    public static int calcTimeoutInterval(double estimatedRTT, double devRTT)
+    {
+        int timeout = estimatedRTT + 4 * devRTT;
+        return timeout;
+    }
+
+    public static double calcEstimatedRTT(double startInMillis, double endInMillis, double estimatedRTT)
+    {
+        double sRTT = endInMillis - startInMillis;
+        double eRTT = ((1 - alpha) * estimatedRTT) + (alpha * sRTT);
+        return eRTT;
+    }
+
+    public static double calcDevRTT(double startInMillis, double endInMillis, double estimatedRTT, double devRTT)
+    {
+        double sRTT = endInMillis - startInMillis;
+        double dRTT = ((1 - beta) * devRTT) + (beta * Math.abs(sRTT - estimatedRTT));
+        return dRTT;
+    }
 
 
 
