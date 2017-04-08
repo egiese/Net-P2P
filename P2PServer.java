@@ -8,6 +8,8 @@ import java.util.Scanner;
 
 public class P2PServer
 {
+	final static double INIT_SEQ_NUM = 0;
+	final static double SEQ_NUM_WIN = 2;
 	final static int PORT = 5666;
 	final static String serverHostname = "localhost";
 	private static Scanner scan;

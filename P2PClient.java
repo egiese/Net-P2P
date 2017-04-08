@@ -22,6 +22,8 @@ public class P2PClient
     final static double INIT_DEV_RTT = 0.0;
     final static double alpha = 0.125;
     final static double beta = 0.25;
+	final static double INIT_SEQ_NUM = 0;
+	final static double SEQ_NUM_WIN = 2;
 	final static String serverHostname = "localhost";
 
 	private static Scanner scan;
