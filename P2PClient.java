@@ -22,6 +22,8 @@ public class P2PClient
     final static double INIT_DEV_RTT = 0.0;
     final static double alpha = 0.125;
     final static double beta = 0.25;
+	final static int INIT_SEQ_NUM = 0;
+	final static int SEQ_NUM_WIN = 2;
 	final static String serverHostname = "localhost";
 
 	private static Scanner scan;
@@ -48,6 +50,8 @@ public class P2PClient
         estRTT = calcEstimatedRTT(0.0, INIT_EST_RTT, estRTT);
         int timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
 
+		int currSeqNum = INIT_SEQ_NUM;
+
 		for(String p : packets)
 		{
 
@@ -70,18 +74,18 @@ public class P2PClient
                 {
                     sendSkt.receive(rcvPkt);
                 }
-                // If timeout,
+                // If timeout
                 catch(SocketTimeoutException e)
                 {
                     double endTime = System.nanoTime() / 1000000;
                     System.out.println("Timeout!");
-                    // recalculate timeout interval,
+                    // Recalculate timeout interval
                     devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
                     estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
                     timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
-                    // resend packet,
+                    // Resend packet
                     sendSkt.send(sendPkt);
-                    // and restart loop
+                    // Restart loop
                     continue;
                 }
                 double endTime = System.nanoTime() / 1000000;
@@ -90,19 +94,27 @@ public class P2PClient
                 devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
                 estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
                 timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
-                // If incorrect sequence number,
-                // resend packet,
-                // and restart loop
-
+				// Check new seq number
+				int newSeqNum = getSeqNum(new String(rcvPkt.getData()));
+				// If incorrect sequence number
+				if(newSeqNum != currSeqNum)
+				{
+					System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
+                // Resend packet
+					sendSkt.send(sendPkt);
+                // Restart loop
+					continue;
+				}
                 // Turn off timer
                 sendSkt.setSoTimeout(0);
+				//Incrememnt sequence number
+				currSeqNum = (currSeqNum + 1) % SEQ_NUM_WIN;
                 // End loop
                 break;
             }
 
             String ACK = new String(rcvPkt.getData());
             int sequenceNum = getSeqNum(ACK);
-
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();

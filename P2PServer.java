@@ -8,6 +8,8 @@ import java.util.Scanner;
 
 public class P2PServer
 {
+	final static int INIT_SEQ_NUM = 0;
+	final static int SEQ_NUM_WIN = 2;
 	final static int PORT = 5666;
 	final static String serverHostname = "localhost";
 	private static Scanner scan;
@@ -29,6 +31,7 @@ public class P2PServer
 		DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 		DatagramPacket sendPkt = null;
 		
+		int currSeqNum = INIT_SEQ_NUM;
 		
 		while(true)
 		{
@@ -41,8 +44,17 @@ public class P2PServer
 			String message = new String(rcvPkt.getData());
 			scan = new Scanner(message);
 			int headerLength = scan.nextLine().length() + 2;
-			incPackets.add(message.substring(headerLength, rcvpktsize));
 			int sequenceNum = getSeqNum(message);
+			
+			if(currSeqNum != sequenceNum)
+			{
+				System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
+				continue;
+			}
+			
+			// Increment sequence number
+			currSeqNum = (currSeqNum + 1) % SEQ_NUM_WIN;
+			incPackets.add(message.substring(headerLength, rcvpktsize));
 			String totalMsg = combinePackets(incPackets);
 			
 			
