@@ -2,6 +2,7 @@
 import java.io.File;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketTimeoutException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -55,14 +56,15 @@ public class P2PClient
 			DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, PORT);
 			sendSkt.send(sendPkt);
 			System.out.println("Waiting for ACK...");
+            DatagramPacket rcvPkt;
 
             while(true)
             {
                 // Receiving ACKs //
                 // Start Timer
-                socket.setSoTimeout(timeoutInterval);
+                sendSkt.setSoTimeout(timeoutInterval);
                 double startTime = System.nanoTime() / 1000000;
-                DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+                rcvPkt = new DatagramPacket(rcvData, rcvData.length);
                 try
                 {
                     sendSkt.receive(rcvPkt);
@@ -92,7 +94,7 @@ public class P2PClient
                 // and restart loop
 
                 // Turn off timer
-                socket.setSoTimeout(0);
+                sendSkt.setSoTimeout(0);
                 // End loop
                 break;
             }
@@ -115,7 +117,7 @@ public class P2PClient
 
     public static int calcTimeoutInterval(double estimatedRTT, double devRTT)
     {
-        int timeout = estimatedRTT + 4 * devRTT;
+        int timeout = (int) (estimatedRTT + 4 * devRTT);
         return timeout;
     }
 
