@@ -1,4 +1,3 @@
-public class P2PClient
 
 import java.io.File;
 import java.net.DatagramPacket;
@@ -7,6 +6,8 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Timer;
+
+public class P2PClient
 {
 	final static int PORT = 5666;
 	final static int CLI_PORT = 6666;
