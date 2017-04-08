@@ -65,20 +65,6 @@ import java.util.Timer;
                 try
                 {
                     sendSkt.receive(rcvPkt);
-                    System.out.println("ACK received!");
-                    // recalculate estRTT,
-                    double endTime = System.nanoTime() / 1000000;
-                    devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
-                    estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
-                    timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
-                    // If incorrect sequence number,
-                    // resend packet,
-                    // and restart loop
-
-                    // Turn off timer
-                    socket.setSoTimeout(0);
-                    // End loop
-                    break;
                 }
                 // If timeout,
                 catch(SocketTimeoutException e)
@@ -94,11 +80,25 @@ import java.util.Timer;
                     // and restart loop
                     continue;
                 }
+                double endTime = System.nanoTime() / 1000000;
+                System.out.println("ACK received!");
+                // recalculate estRTT,
+                devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
+                estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
+                timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
+                // If incorrect sequence number,
+                // resend packet,
+                // and restart loop
+
+                // Turn off timer
+                socket.setSoTimeout(0);
+                // End loop
+                break;
             }
 
             String ACK = new String(rcvPkt.getData());
             int sequenceNum = getSeqNum(ACK);
-            
+
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
