@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Timer;
+import java.net.*;
 
 public class P2PClient
 {
