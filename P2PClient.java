@@ -99,7 +99,7 @@ public class P2PClient
 				// If incorrect sequence number
 				if(newSeqNum != currSeqNum)
 				{
-					System.out.println("Wrong sequence number.\nExpected " + currSeqNum + "got " + newSeqNum + ".");
+					System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
                 // Resend packet
 					sendSkt.send(sendPkt);
                 // Restart loop
