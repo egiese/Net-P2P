@@ -25,6 +25,7 @@ public class P2PClient
 	final static int INIT_SEQ_NUM = 0;
 	final static int SEQ_NUM_WIN = 2;
 	final static String serverHostname = "localhost";
+	final static String sharePath = "C:/Users/Kookus/Documents/CCSU/Spring 2017/CS 490 - Networking/SharedFiles";
 
 	private static Scanner scan;
 	private static DatagramSocket sendSkt;
@@ -187,7 +188,7 @@ public class P2PClient
 		if(flag == 1)
 		{
 			msg += "INUP" + " " + InetAddress.getLocalHost() + "\r\n";
-			File folder = new File("C:/Users/Kookus/Documents/CCSU/Spring 2017/CS 490 - Networking/SharedFiles");
+			File folder = new File(sharePath);
 			File[] sharedFiles = folder.listFiles();
 
 			for(File file : sharedFiles)
