@@ -12,12 +12,10 @@ import java.net.*;
 public class P2PClient
 {
 	final static int PORT = 5666;
-	final static int CLI_PORT = 6666;
 	final static int MTU = 128;
 	final static int IPHEAD = 20;
 	final static int UDPHEAD = 8;
 	final static int SEQ = 3;
-	final static int APPHEADER = 5;
 	final static double INIT_EST_RTT = 100.0; //Note, RTT is measured in milliseconds.
 	final static double INIT_DEV_RTT = 0.0;
 	final static double alpha = 0.125;
@@ -62,7 +60,9 @@ public class P2PClient
 			DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, PORT);
 			sendSkt.send(sendPkt);
 			
-			System.out.println("Waiting for ACK...");
+			System.out.println("Sending following packet with seq# " + getSeqNum(p) + "\n{\n" + p + "\n}\n");
+			
+			System.out.println("Waiting for ACK...\n");
            		DatagramPacket rcvPkt;
 
 			// Receiving ACKs //
@@ -124,20 +124,32 @@ public class P2PClient
 			int clientPort = rcvPkt.getPort();
             		String ack = new String(rcvPkt.getData());
 
-			System.out.println("ACK = " + ack);
-			System.out.println("sequence number = " + sequenceNum);
+			System.out.println("ACK = \n[\n" + ack + "\n]");
+			System.out.println("Sequence number = " + sequenceNum);
 			System.out.println("Sender IP address: " + clientIP);
 			System.out.println("Sender port: " + clientPort);
 			System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
 		}
 	}
 
+	
+	/*
+	 * ---------------------------------------------------------------
+	 * Method to calculate timeout interval based on estRTT and devRTT
+	 * ---------------------------------------------------------------
+	 */
 	public static int calcTimeoutInterval(double estimatedRTT, double devRTT)
 	{
 		int timeout = (int) (estimatedRTT + 4 * devRTT);
 		return timeout;
 	}
 
+	
+	/*
+	 * ---------------------------------------------------------------------------------------------
+	 * Method to calculate estRTT based on start, end, previous estRTT, and constants alpha and beta
+	 * ---------------------------------------------------------------------------------------------
+	 */
 	public static double calcEstimatedRTT(double startInMillis, double endInMillis, double estimatedRTT)
 	{
 		double sRTT = endInMillis - startInMillis;
@@ -145,6 +157,12 @@ public class P2PClient
 		return eRTT;
 	}
 
+	
+	/*
+	 * -----------------------------------------------------------------------------------------------------
+	 * Method to calculate devRTT based on start, end, estRTT, previous devRTT, and constants alpha and beta
+	 * -----------------------------------------------------------------------------------------------------
+	 */
 	public static double calcDevRTT(double startInMillis, double endInMillis, double estimatedRTT, double devRTT)
 	{
 		double sRTT = endInMillis - startInMillis;
@@ -152,6 +170,14 @@ public class P2PClient
 		return dRTT;
 	}
 
+	
+	/*
+	 * ---------------------------------------------------------------------------------
+	 * Method to extract the sequence number out of an incoming packet
+	 * Takes a packet String as parameter, and returns the sequence number found in our
+	 * custom UDP 3.0 header, at the third and last location in the header.
+	 * ---------------------------------------------------------------------------------
+	 */
 	public static int getSeqNum(String packet)
 	{
 		seq = new Scanner(packet);
@@ -160,13 +186,20 @@ public class P2PClient
 
 		return Integer.parseInt(seq.next());
 	}
-
+	
+	
+	/*
+	 * ------------------------------------------------------------------------------------
+	 * Method to create an ACK for a received packed based on its sequence number
+	 * Takes sequence number as parameter, and returns a String with the ACK flag raised,
+	 * the sequence number it's ACKing, and the message-terminating CRLFCRLF
+	 * ------------------------------------------------------------------------------------
+	 */
 	public static String createACK(int sequenceNumber)
 	{
 		return " 1 " + sequenceNumber + "\r\n\r\n";
 	}
-
-
+	
 
 	/*
 	 * ---------------------------------------------------------------------------------------------
