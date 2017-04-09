@@ -65,55 +65,57 @@ public class P2PClient
 			System.out.println("Waiting for ACK...");
            		DatagramPacket rcvPkt;
 
-            while(true)
-            {
-                // Receiving ACKs //
-                // Start Timer
-                sendSkt.setSoTimeout(timeoutInterval);
-                double startTime = System.nanoTime() / 1000000;
-                rcvPkt = new DatagramPacket(rcvData, rcvData.length);
-                try
-                {
-                    sendSkt.receive(rcvPkt);
-                }
-                // If timeout
-                catch(SocketTimeoutException e)
-                {
-                    double endTime = System.nanoTime() / 1000000;
-                    System.out.println("Timeout!");
-                    // Recalculate timeout interval
-                    devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
-                    estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
-                    timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
-                    // Resend packet
-                    sendSkt.send(sendPkt);
-                    // Restart loop
-                    continue;
-                }
-                double endTime = System.nanoTime() / 1000000;
-                System.out.println("ACK received!");
-                // Recalculate timeout interval
-                devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
-                estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
-                timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
+			// Receiving ACKs //
+			while(true)
+			{
+				// Start Timer
+				sendSkt.setSoTimeout(timeoutInterval);
+				double startTime = System.nanoTime() / 1000000;
+				rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+				
+				// Try to receive a packet
+				try
+				{
+					sendSkt.receive(rcvPkt);
+				}
+				// If timeout
+				catch(SocketTimeoutException e)
+				{
+					double endTime = System.nanoTime() / 1000000;
+					System.out.println("Timeout!");
+					// Recalculate timeout interval
+					devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
+					estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
+					timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
+					// Resend packet
+					sendSkt.send(sendPkt);
+					// Restart loop
+					continue;
+				}
+				double endTime = System.nanoTime() / 1000000;
+				System.out.println("ACK received!");
+				// Recalculate timeout interval
+				devRTT = calcDevRTT(startTime, endTime, estRTT, devRTT);
+				estRTT = calcEstimatedRTT(startTime, endTime, estRTT);
+				timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
 				// Check new seq number
 				int newSeqNum = getSeqNum(new String(rcvPkt.getData()));
 				// If incorrect sequence number
 				if(newSeqNum != currSeqNum)
 				{
 					System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
-                // Resend packet
+					// Resend packet
 					sendSkt.send(sendPkt);
-                // Restart loop
+					// Restart loop
 					continue;
 				}
-                // Turn off timer
-                sendSkt.setSoTimeout(0);
+				// Turn off timer
+				sendSkt.setSoTimeout(0);
 				//Incrememnt sequence number
 				currSeqNum = (currSeqNum + 1) % SEQ_NUM_WIN;
-                // End loop
-                break;
-            }
+				// End loop
+				break;
+			}
 
            		String ACK = new String(rcvPkt.getData());
            		int sequenceNum = getSeqNum(ACK);
