@@ -18,10 +18,10 @@ public class P2PClient
 	final static int UDPHEAD = 8;
 	final static int SEQ = 3;
 	final static int APPHEADER = 5;
-    final static double INIT_EST_RTT = 100.0; //Note, RTT is measured in milliseconds.
-    final static double INIT_DEV_RTT = 0.0;
-    final static double alpha = 0.125;
-    final static double beta = 0.25;
+	final static double INIT_EST_RTT = 100.0; //Note, RTT is measured in milliseconds.
+	final static double INIT_DEV_RTT = 0.0;
+	final static double alpha = 0.125;
+	final static double beta = 0.25;
 	final static int INIT_SEQ_NUM = 0;
 	final static int SEQ_NUM_WIN = 2;
 	final static String serverHostname = "localhost";
@@ -45,11 +45,11 @@ public class P2PClient
 		String message = genReqMsg(1);
 		String[] packets = makePacket(message);
 
-        double estRTT = INIT_EST_RTT;
-        double devRTT = INIT_DEV_RTT;
-        devRTT = calcDevRTT(0.0, INIT_EST_RTT, estRTT, devRTT);
-        estRTT = calcEstimatedRTT(0.0, INIT_EST_RTT, estRTT);
-        int timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
+		double estRTT = INIT_EST_RTT;
+		double devRTT = INIT_DEV_RTT;
+		devRTT = calcDevRTT(0.0, INIT_EST_RTT, estRTT, devRTT);
+		estRTT = calcEstimatedRTT(0.0, INIT_EST_RTT, estRTT);
+		int timeoutInterval = calcTimeoutInterval(estRTT, devRTT);
 
 		int currSeqNum = INIT_SEQ_NUM;
 
@@ -61,8 +61,9 @@ public class P2PClient
 			sendData = p.getBytes();
 			DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, PORT);
 			sendSkt.send(sendPkt);
+			
 			System.out.println("Waiting for ACK...");
-            DatagramPacket rcvPkt;
+           		DatagramPacket rcvPkt;
 
             while(true)
             {
@@ -114,12 +115,12 @@ public class P2PClient
                 break;
             }
 
-            String ACK = new String(rcvPkt.getData());
-            int sequenceNum = getSeqNum(ACK);
+           		String ACK = new String(rcvPkt.getData());
+           		int sequenceNum = getSeqNum(ACK);
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
-            String ack = new String(rcvPkt.getData());
+            		String ack = new String(rcvPkt.getData());
 
 			System.out.println("ACK = " + ack);
 			System.out.println("sequence number = " + sequenceNum);
@@ -129,25 +130,25 @@ public class P2PClient
 		}
 	}
 
-    public static int calcTimeoutInterval(double estimatedRTT, double devRTT)
-    {
-        int timeout = (int) (estimatedRTT + 4 * devRTT);
-        return timeout;
-    }
+	public static int calcTimeoutInterval(double estimatedRTT, double devRTT)
+	{
+		int timeout = (int) (estimatedRTT + 4 * devRTT);
+		return timeout;
+	}
 
-    public static double calcEstimatedRTT(double startInMillis, double endInMillis, double estimatedRTT)
-    {
-        double sRTT = endInMillis - startInMillis;
-        double eRTT = ((1 - alpha) * estimatedRTT) + (alpha * sRTT);
-        return eRTT;
-    }
+	public static double calcEstimatedRTT(double startInMillis, double endInMillis, double estimatedRTT)
+	{
+		double sRTT = endInMillis - startInMillis;
+		double eRTT = ((1 - alpha) * estimatedRTT) + (alpha * sRTT);
+		return eRTT;
+	}
 
-    public static double calcDevRTT(double startInMillis, double endInMillis, double estimatedRTT, double devRTT)
-    {
-        double sRTT = endInMillis - startInMillis;
-        double dRTT = ((1 - beta) * devRTT) + (beta * Math.abs(sRTT - estimatedRTT));
-        return dRTT;
-    }
+	public static double calcDevRTT(double startInMillis, double endInMillis, double estimatedRTT, double devRTT)
+	{
+		double sRTT = endInMillis - startInMillis;
+		double dRTT = ((1 - beta) * devRTT) + (beta * Math.abs(sRTT - estimatedRTT));
+		return dRTT;
+	}
 
 	public static int getSeqNum(String packet)
 	{
