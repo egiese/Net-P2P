@@ -24,7 +24,6 @@ public class P2PClient
 	final static int SEQ_NUM_WIN = 2;
 	final static String serverHostname = "10.0.0.44";
 	final static String sharePath = "C:/Users/Kookus/Documents/CCSU/Spring 2017/CS 490 - Networking/SharedFiles";
-	final static String alice = "AliceInWonderland.txt";
 
 	private static Scanner scan;
 	private static DatagramSocket sendSkt;
@@ -37,16 +36,9 @@ public class P2PClient
 		sendSkt = new DatagramSocket();
 		byte[] rcvData = new byte[1024];
 
-
-		// User input to determine what type of message
-		Scanner userInput = new Scanner(System.in);
-		System.out.println("Enter message number (without '')\n\t'1' for INUP\n\t" +
-						   "'2' for QUER\n\t'3' for EXIT\n\t'4' for AliceInWonderland");
-		int msgType = userInput.nextInt();
-
 		System.out.println("Attempting to send to " + serverIP + " via UDP");
 
-		String message = genReqMsg(msgType);
+		String message = genReqMsg(1);
 		String[] packets = makePacket(message);
 
 		double estRTT = INIT_EST_RTT;
@@ -144,7 +136,7 @@ public class P2PClient
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
-            		String ack = new String(rcvPkt.getData());
+           		String ack = new String(rcvPkt.getData());
 
 			System.out.println("ACK = \n[\n" + ack + "\n]");
 			System.out.println("Sequence number = " + sequenceNum);
@@ -267,18 +259,7 @@ public class P2PClient
 			msg += "EXIT" + " " + InetAddress.getLocalHost() + "\r\n";
 			msg += "$$$$$$$$";
 		}
-		
-		else if(flag == 4)
-		{
-			File aliceInWonderland = new File(alice);
-			Scanner aliceScan = new Scanner(aliceInWonderland);
-			
-			while(aliceScan.hasNext())
-			{
-				msg += aliceScan.nextLine() + "\n";
-			}
-			
-		}
+	
 
 		msg += "\r\n";
 
