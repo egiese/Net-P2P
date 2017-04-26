@@ -30,7 +30,7 @@ public class P2PServer
 		
 		DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 		DatagramPacket sendPkt = null;
-		
+
 		int currSeqNum = INIT_SEQ_NUM;
 		
 		while(true)
@@ -49,6 +49,13 @@ public class P2PServer
 			if(currSeqNum != sequenceNum)
 			{
 				System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
+				// Resend previous ACK
+				System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
+				String ACK = InetAddress.getLocalHost() + createACK(currSeqNum);
+				byte[] sendData = new byte[ACK.length()];
+				sendData = ACK.getBytes();
+				sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, clientPort);
+				srvSkt.send(sendPkt);
 				continue;
 			}
 			
