@@ -5,7 +5,7 @@ import java.util.Scanner;
 /**
  * Created by Simon on 4/26/17.
  */
-interface Sender
+public interface Sender
 {
 //    Packet Info
     int MTU = 128;
