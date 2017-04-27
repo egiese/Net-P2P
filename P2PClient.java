@@ -131,12 +131,12 @@ public class P2PClient
 				break;
 			}
 
-           		String ACK = new String(rcvPkt.getData());
-           		int sequenceNum = getSeqNum(ACK);
+			String ACK = new String(rcvPkt.getData());
+			int sequenceNum = getSeqNum(ACK);
 			int rcvpktsize = rcvPkt.getLength();
 			InetAddress clientIP = rcvPkt.getAddress();
 			int clientPort = rcvPkt.getPort();
-           		String ack = new String(rcvPkt.getData());
+			String ack = new String(rcvPkt.getData());
 
 			System.out.println("ACK = \n[\n" + ack + "\n]");
 			System.out.println("Sequence number = " + sequenceNum);
