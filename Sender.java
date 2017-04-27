@@ -22,24 +22,47 @@ interface Sender
     double alpha = 0.125;
     double beta = 0.25;
 
+    void sendMessage(String msgType) throws Exception;
 
+    /*
+	 * ---------------------------------------------------------------
+	 * Method to calculate timeout interval based on estRTT and devRTT
+	 * ---------------------------------------------------------------
+	 */
     static int calcTimeoutInterval(double esimtatedRTT, double devRTT)
     {
         return ((int) (esimtatedRTT + 4 * devRTT));
     }
 
+    /*
+	 * ---------------------------------------------------------------------------------------------
+	 * Method to calculate estRTT based on start, end, previous estRTT, and constants alpha and beta
+	 * ---------------------------------------------------------------------------------------------
+	 */
     static double calcEstimatedRTT(double startInMillis, double endInMillis, double estimatedRTT)
     {
         double sRTT = endInMillis - startInMillis;
         return  ((1 - alpha) * estimatedRTT) + (alpha * sRTT);
     }
 
+    /*
+	 * -----------------------------------------------------------------------------------------------------
+	 * Method to calculate devRTT based on start, end, estRTT, previous devRTT, and constants alpha and beta
+	 * -----------------------------------------------------------------------------------------------------
+	 */
     static double calcDevRTT(double startInMillis, double endInMillis, double estimatedRTT, double devRTT)
     {
         double sRTT = endInMillis - startInMillis;
         return ((1 - beta) * devRTT) + (beta * Math.abs(sRTT - estimatedRTT));
     }
 
+    /*
+     * ------------------------------------------------------------------------------------
+     * Method to create an ACK for a received packed based on its sequence number
+     * Takes sequence number as parameter, and returns a String with the ACK flag raised,
+     * the sequence number it's ACKing, and the message-terminating CRLFCRLF
+     * ------------------------------------------------------------------------------------
+     */
     static int getSeqNum(String packet)
     {
         Scanner seq = new Scanner(packet);
@@ -48,6 +71,14 @@ interface Sender
         return Integer.parseInt(seq.next());
     }
 
+    /*
+     * ---------------------------------------------------------------------------------------------
+     * This method takes a message String as parameter, and calculates the number of packets it
+     * will be divided into based on IPv4, UDP, and our own header data
+     *
+     * Method returns the number of packets as integer
+     * ---------------------------------------------------------------------------------------------
+     */
     static int getNumPackets(String msg) throws Exception
     {
         String header = InetAddress.getLocalHost() + " 0 ";
@@ -56,6 +87,15 @@ interface Sender
         return numPackets;
     }
 
+    /*
+     * ---------------------------------------------------------------------------------------------
+     * This method takes a message String as a parameter, and returns an array of packets
+     *
+     * Each packet will have a sequence number of 0 (even) or 1 (odd) followed by CRLF at the head
+     *
+     * Method returns a String array containing each packet
+     * ---------------------------------------------------------------------------------------------
+     */
     public static String[] makePacket(String msg) throws Exception
     {
         String header = InetAddress.getLocalHost() + " 0 ";
