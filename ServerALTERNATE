@@ -16,7 +16,6 @@ public class P2PServer
 	private static ArrayList<String> incPackets;
 	private static ArrayList<Peer> peers;
 	private static Scanner seq;
-	
 
 	public static void main (String [] args) throws IOException
 	{
@@ -33,7 +32,6 @@ public class P2PServer
 		int currSeqNum = INIT_SEQ_NUM;
 		
                 String totalMsg = "";
-                boolean isEnd = false;
                 
 		while(true)
 		{
@@ -45,6 +43,8 @@ public class P2PServer
 			String message = new String(rcvPkt.getData());
                         
 			scan = new Scanner(message);
+                        
+                        // Extract header length and seqNum from incoming packet //
 			int headerLength = scan.nextLine().length() + 2;
 			int sequenceNum = getSeqNum(message);
 			
@@ -61,8 +61,10 @@ public class P2PServer
 				continue;
 			}
 			
-			// Increment sequence number
+			// Increment sequence number //
 			currSeqNum = (currSeqNum + 1) % SEQ_NUM_WIN;
+                        
+                        // Add packet to ArrayList of packets //
 			incPackets.add(message.substring(headerLength, rcvpktsize));
                         
                         
@@ -78,18 +80,21 @@ public class P2PServer
 			srvSkt.send(sendPkt);
 			
                         
+                        // Check if the packet is the last packet of the message //
+                        // Then create the total message, and make a peer object //
+                        // adding it to peer list, then generate a response msg  //
                         try
                         {
                             if(isEndOfMsg(message,rcvpktsize))
                             {
                                 totalMsg = combinePackets(incPackets);
+                                totalMsg = totalMsg.substring(0, totalMsg.length()-1);
                                 System.out.println("End of message");
                                 System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
                                 System.out.println("arraylist item size: " + totalMsg.length() + "\n");
                                 
                                 String answer = parseMsg(totalMsg);
                                 System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
-                                
                                 System.out.println("Peer OBJ info = " + peers.get(0).getHost());
                                 
                                 totalMsg = null;
@@ -134,8 +139,6 @@ public class P2PServer
 		String hostInfo = scan.next();
                 // flush scanner
                 scan.nextLine();
-                
-                System.out.println("METHOD FROM MSG = " + method);
 
 		if(method.equals("INUP"))
 		{
@@ -146,21 +149,22 @@ public class P2PServer
 		else if(method.equals("QUER"))
 		{
 			//scan entire hashmap, looking at first scan.next() String for song name
-
-                        System.out.println("going here");
 			String queryName = scan.nextLine();
 			String queryResponse = "";
-			String search;
+			String search = null;
 			
                         System.out.println("queryname = " + queryName);
                         
 			for(Peer peer : peers)
 			{
-				if(!(search = peer.searchHash(queryName)).equals("File not found"))
-					queryResponse += search + "\r\n";
-				
+                            if(!(search = peer.searchHash(queryName)).equals("File not found"))
+                                    queryResponse += search + "\r\n";
+                            
 			}
 			
+                        if(search == null)
+                            search = "File not found";
+                            
 			//do something here with the response message.
 			return genRspMsg(method) + queryResponse;
 		}
