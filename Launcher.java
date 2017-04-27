@@ -34,6 +34,10 @@ public class Launcher
             port = scanner.nextInt();
         } while (port == 0);
 
+//        TODO Create instance of either Sender or Server using given information.
+//        TODO Loop until "exit".
+//        TODO Send commands to objects.
+
     }
 
 }
