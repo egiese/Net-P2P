@@ -34,26 +34,30 @@ public class Launcher
             port = scanner.nextInt();
         } while (port == 0);
 
-//        TODO Create instance of either Sender or Server using given information.
-//        TODO Loop until "exit".
-//        TODO Send commands to objects.
-        String input;
-        Client test = new Client(port, serverHostname);
-        do {
-            System.out.println("What should the " + instanceType + " do?\nInform and update [INUP]\nQuery [QUER]\nExit [EXIT]\nBreak control loop [STOP]");
-            input = scanner.next().toUpperCase();
-            switch (input) {
-                case "INUP":
-                    test.sendMessage("INUP");
-                    break;
-                case "QUER":
-                    test.sendMessage("QUER");
-                    break;
-                case "EXIT":
-                    test.sendMessage("EXIT");
-                    break;
-            }
-        } while(!(input.equals("STOP")));
+        if(instanceType.equals("server"))
+        {
+            Server server = new Server(port);
+            server.serve();
+        }
+        else {
+            String input;
+            Client test = new Client(port, serverHostname);
+            do {
+                System.out.println("What should the " + instanceType + " do?\nInform and update [INUP]\nQuery [QUER]\nExit [EXIT]\nBreak control loop [STOP]");
+                input = scanner.next().toUpperCase();
+                switch (input) {
+                    case "INUP":
+                        test.sendMessage("INUP");
+                        break;
+                    case "QUER":
+                        test.sendMessage("QUER");
+                        break;
+                    case "EXIT":
+                        test.sendMessage("EXIT");
+                        break;
+                }
+            } while (!(input.equals("STOP")));
+        }
     }
 
 }
