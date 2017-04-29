@@ -139,12 +139,13 @@ public class Server implements Sender, Receiver
                     e.printStackTrace();
                 }
 
-                System.out.println(incPackets);
 
-//                if(incPackets.get(incPackets.size() - 1).contains("\r\n\r\n"))
-//                {
-//
-//                }
+                if(incPackets.get(incPackets.size() - 1).contains("\r\n\r\n\r\n"))
+                {
+                    System.out.println(incPackets);
+                    currClients.remove(this);
+                    break;
+                }
             }
         }
     }

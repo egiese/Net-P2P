@@ -180,7 +180,7 @@ public class Client implements Sender, Receiver
                 msg += "$$$$$$$$";
                 break;
         }
-        msg += "\r\n$";
+        msg += "\r\n\r\n";
 
         return msg;
     }
