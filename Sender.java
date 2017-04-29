@@ -83,7 +83,14 @@ public interface Sender
     {
         String header = InetAddress.getLocalHost() + " 0 ";
         int payloadSize = MTU - IPHEAD - UDPHEAD - SEQ - header.length();
-        int numPackets = (int) Math.ceil(msg.length() / payloadSize);
+        int numPackets = msg.length() / payloadSize;
+        if(msg.length() % payloadSize != 0)
+            numPackets++;
+
+        System.out.println("num packets = " + numPackets);
+        System.out.println("payloadSize = "+ payloadSize);
+        System.out.println("msg size = " + msg.length());
+
         return numPackets;
     }
 
