@@ -3,7 +3,9 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -61,23 +63,88 @@ public class Server implements Sender, Receiver
     {
         private InetAddress clientIP;
         private BlockingQueue<DatagramPacket> queue;
+        private ArrayList<String> incPackets;
 
         public ClientHandler(InetAddress clientIP, BlockingQueue<DatagramPacket> queue)
         {
             this.clientIP = clientIP;
             this.queue = queue;
+            this.incPackets = new ArrayList<String>();
             System.out.println("New Thread!");
         }
 
         public void run()
         {
+            byte[] rcvData = new byte[100];
+            DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+            DatagramPacket sendPkt = null;
+
+            int currSeqNum = Receiver.INIT_SEQ_NUM;
+            String totalMsg = "";
+
             while(true)
             {
+                System.out.println("Waiting for packet from client " + clientIP.getHostAddress());
                 try {
-                    System.out.println(queue.take().getData());
+                    rcvPkt = queue.take();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                int rcvpktsize = rcvPkt.getLength();
+                int clientPort = rcvPkt.getPort();
+                String message = new String(rcvPkt.getData());
+                Scanner scan = new Scanner(message);
+                int headerLength = scan.nextLine().length() + 2;
+                int sequenceNum = Sender.getSeqNum(message);
+
+                if(currSeqNum != sequenceNum)
+                {
+                    System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
+                    //Resend previous ACK
+                    System.out.println("Sending ACK for " + currSeqNum + " to " + clientIP + " on port " + clientPort);
+                    String ACK = null;
+                    try {
+                        ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    }
+                    byte[] sendData = new byte[ACK.length()];
+                    sendData = ACK.getBytes();
+                    sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, clientPort);
+                    try {
+                        serverSocket.send(sendPkt);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    continue;
+                }
+
+                // Increment Sequence Number
+                currSeqNum = (currSeqNum + 1) % Receiver.SEQ_NUM_WIN;
+                incPackets.add(message.substring(headerLength, rcvpktsize));
+
+                // ACKing Packets
+                System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
+                String ACK = null;
+                try {
+                    ACK = InetAddress.getLocalHost() + Receiver.createACK(sequenceNum);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                byte[] sendData = ACK.getBytes();
+                sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, clientPort);
+                try {
+                    serverSocket.send(sendPkt);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                System.out.println(incPackets);
+
+//                if(incPackets.get(incPackets.size() - 1).contains("\r\n\r\n"))
+//                {
+//
+//                }
             }
         }
     }
