@@ -10,8 +10,6 @@ interface Receiver
     int INIT_SEQ_NUM = 0;
     int SEQ_NUM_WIN = 2;
 
-    void receiveMessage() throws Exception;
-
     /*
 	 * ------------------------------------------------------------------------------------
 	 * Method to create an ACK for a received packed based on its sequence number
