@@ -22,7 +22,6 @@ public interface Sender
     double alpha = 0.125;
     double beta = 0.25;
 
-    void sendMessage(String msgType) throws Exception;
 
     /*
 	 * ---------------------------------------------------------------
