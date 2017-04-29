@@ -9,24 +9,23 @@ import java.util.Scanner;
 public class Client implements Sender, Receiver
 {
     private int portNumber;
-    private String receiverHostname;
-    private InetAddress receiverIP;
-    private Scanner scan,seq;
-    private DatagramSocket sendSkt;
+    private String serverHostname;
+    private InetAddress serverIP;
+    private DatagramSocket socket;
 
     public Client(int portNumber, String receiverHostname) throws Exception
     {
         this.portNumber = portNumber;
-        this.receiverHostname = receiverHostname;
-        this.receiverIP = InetAddress.getByName(this.receiverHostname);
-        this.sendSkt = new DatagramSocket();
+        this.serverHostname = receiverHostname;
+        this.serverIP = InetAddress.getByName(this.serverHostname);
+        this.socket = new DatagramSocket();
     }
 
     public void sendMessage(String msgType) throws Exception
     {
         byte[] rcvData = new byte[1024];
 
-        System.out.println("Attempting to send to " + receiverIP);
+        System.out.println("Attempting to send to " + serverIP);
 
         String msg = genReqMsg(msgType);
         String[] packets = Sender.makePacket(msg);
@@ -45,10 +44,10 @@ public class Client implements Sender, Receiver
             // Sending packets
             byte[] sendData = new byte[p.length()];
             sendData = p.getBytes();
-            DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, receiverIP, portNumber);
+            DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, portNumber);
 
             try{
-                sendSkt.send(sendPkt);
+                socket.send(sendPkt);
             }
             catch (SocketException e){
                 System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -62,13 +61,13 @@ public class Client implements Sender, Receiver
             while(true)
             {
                 // Start Timer
-                sendSkt.setSoTimeout(timeoutInterval);
+                socket.setSoTimeout(timeoutInterval);
                 double startTime = System.nanoTime() / 1000000;
                 rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 
                 // Try to receive a packet
                 try{
-                    sendSkt.receive(rcvPkt);
+                    socket.receive(rcvPkt);
                 }
                 // If timeout
                 catch(SocketTimeoutException e){
@@ -80,7 +79,7 @@ public class Client implements Sender, Receiver
                     timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
                     // Resend packet
                     try{
-                        sendSkt.send(sendPkt);
+                        socket.send(sendPkt);
                     }
                     catch (SocketException se){
                         System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -102,7 +101,7 @@ public class Client implements Sender, Receiver
                     System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
                     // Resend packet
                     try{
-                        sendSkt.send(sendPkt);
+                        socket.send(sendPkt);
                     }
                     catch (SocketException se){
                         System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -111,7 +110,7 @@ public class Client implements Sender, Receiver
                     continue;
                 }
                 // Turn off timer
-                sendSkt.setSoTimeout(0);
+                socket.setSoTimeout(0);
                 // Increment sequence number
                 currSeqNum = (currSeqNum + 1) % Sender.SEQ_NUM_WIN;
                 // End loop
