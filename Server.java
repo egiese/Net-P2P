@@ -10,7 +10,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 /**
  * Created by Simon on 4/29/17.
  */
-public class Server2
+public class Server implements Sender, Receiver
 {
     private int portNumber;
     private DatagramSocket serverSocket;
@@ -18,7 +18,7 @@ public class Server2
     private String clientList;
     private ArrayList<ClientHandler> currClients;
 
-    public Server2(int portNumber) throws Exception
+    public Server(int portNumber) throws Exception
     {
         this.portNumber = portNumber;
         this.serverSocket = new DatagramSocket(portNumber);
@@ -54,6 +54,8 @@ public class Server2
             }
         }
     }
+
+
 
     private class ClientHandler implements Runnable
     {

@@ -36,7 +36,7 @@ public class Launcher
 
         if(instanceType.equals("server"))
         {
-            Server2 server = new Server2(port);
+            Server server = new Server(port);
             server.serve();
         }
         else {
