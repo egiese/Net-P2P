@@ -6,7 +6,7 @@ import java.util.Scanner;
 public class Launcher
 {
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws Exception
     {
         Scanner scanner = new Scanner(System.in);
         String instanceType,serverHostname = "";
@@ -15,11 +15,11 @@ public class Launcher
         System.out.println("Welcome to the P2P application.");
         do
         {
-            System.out.println("Is this machine a client [c] or a server [s]?");
-            instanceType = scanner.next();
-        } while (!(instanceType.equals("c") || instanceType.equals("s")));
+            System.out.println("Is this machine a client [client] or a server [server]?");
+            instanceType = scanner.next().toLowerCase();
+        } while (!(instanceType.equals("client") || instanceType.equals("server")));
 
-        if(instanceType.equals("c"))
+        if(instanceType.equals("client"))
         {
             do
             {
@@ -37,7 +37,23 @@ public class Launcher
 //        TODO Create instance of either Sender or Server using given information.
 //        TODO Loop until "exit".
 //        TODO Send commands to objects.
-
+        String input;
+        Client test = new Client(port, serverHostname);
+        do {
+            System.out.println("What should the " + instanceType + " do?\nInform and update [INUP]\nQuery [QUER]\nExit [EXIT]\nBreak control loop [STOP]");
+            input = scanner.next().toUpperCase();
+            switch (input) {
+                case "INUP":
+                    test.sendMessage("INUP");
+                    break;
+                case "QUER":
+                    test.sendMessage("QUER");
+                    break;
+                case "EXIT":
+                    test.sendMessage("EXIT");
+                    break;
+            }
+        } while(!(input.equals("STOP")));
     }
 
 }
