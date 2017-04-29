@@ -133,6 +133,11 @@ public class Client implements Sender, Receiver
 //        this.receiveMessage();
     }
 
+    public void receiveMessage() throws Exception
+    {
+
+    }
+
     /*
 	 * ---------------------------------------------------------------------------------------------
 	 * This method takes a String parameter, which will denote the message type to server
@@ -162,6 +167,7 @@ public class Client implements Sender, Receiver
 
                 for(File file : sharedFiles)
                     msg += file.getName() + " " + file.length() + " " + file.getPath() + "\r\n";
+
                 break;
             case "QUER":
                 msg += "QUER " + InetAddress.getLocalHost() + "\r\n";
