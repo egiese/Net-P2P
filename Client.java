@@ -12,18 +12,18 @@ public class Client implements Sender, Receiver
     private String receiverHostname;
     private InetAddress receiverIP;
     private Scanner scan,seq;
-//    private DatagramSocket sendSkt;
+    private DatagramSocket sendSkt;
 
     public Client(int portNumber, String receiverHostname) throws Exception
     {
         this.portNumber = portNumber;
         this.receiverHostname = receiverHostname;
         this.receiverIP = InetAddress.getByName(this.receiverHostname);
+        this.sendSkt = new DatagramSocket();
     }
 
     public void sendMessage(String msgType) throws Exception
     {
-        DatagramSocket sendSkt = new DatagramSocket();
         byte[] rcvData = new byte[1024];
 
         System.out.println("Attempting to send to " + receiverIP);
@@ -131,18 +131,19 @@ public class Client implements Sender, Receiver
             System.out.println("Sender port: " + clientPort);
             System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
         }
+//        this.receiveMessage();
     }
 
     /*
 	 * ---------------------------------------------------------------------------------------------
-	 * This method takes an integer parameter of flag, which will denote the message type to server
+	 * This method takes a String parameter, which will denote the message type to server
 	 * Message always begins with the flag number and the client's InetAddress, followed by CRLF
 	 *
-	 * Flag of 1 is for inform and update
+	 * "INUP" is for inform and update
 	 * 		This portion scans a users shared file --- chosen by GUI later on --- and appends
 	 * 		file name and file size (in bytes) of every file in the folder, followed by CRLF
-	 * Flag of 2 is to query for file(s)
-	 * Flag of 3 is for exit --- using "$$$$$$$$" as placeholder message for now
+	 * "QUER" is to query for file(s)
+	 * "EXIT" is for exit --- using "$$$$$$$$" as placeholder message for now
 	 *
 	 * Method returns the overall message String
 	 * ---------------------------------------------------------------------------------------------
