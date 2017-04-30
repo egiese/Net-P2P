@@ -5,6 +5,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -16,7 +18,7 @@ public class Server implements Sender, Receiver
 {
     private int portNumber;
     private DatagramSocket serverSocket;
-    private static ArrayList<Peer> peers;
+    private static List<Peer> peers;
     private ArrayList<ClientHandler> currClients;
 
     public Server(int portNumber) throws Exception
@@ -65,20 +67,31 @@ public class Server implements Sender, Receiver
         String hostInfo = scan.next();
         scan.nextLine();
 
+        Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
+        String hostname = hostScan.next();
+        String IPAddress = "/" + hostScan.next();
+
         switch (method)
         {
             case "INUP":
+                for(Iterator<Peer> iter = peers.iterator(); iter.hasNext();)
+                {
+                    Peer p = iter.next();
+                    if(p.getIP().equals(IPAddress) || p.getHost().equals(hostname))
+                        iter.remove();
+                }
                 peers.add(new Peer(hostInfo, msg));
                 message += genRspMsg(method);
                 break;
             case "QUER":
+                String queryResponse = "";
                 if(!peers.isEmpty())
                 {
                     String queryName = scan.nextLine();
-                    String queryResponse = "";
                     String search = null;
 
                     System.out.println("queryname = " + queryName);
+
                     for(Peer peer : peers)
                     {
                         if(!(search = peer.searchHash(queryName)).equals("File not found"))
@@ -86,29 +99,20 @@ public class Server implements Sender, Receiver
                     }
 
                     if(search.equals("File not found"))
-                        queryResponse += search + "\r\n";
-                    message += genRspMsg(method) + queryResponse;
+                        queryResponse = "File not found\r\n";
                 }
+                message += genRspMsg(method) + queryResponse;
                 break;
             case "EXIT":
-                if(!peers.isEmpty()) {
-                    Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
-                    String hostname = hostScan.next();
-                    String IPAddress = "/" + hostScan.next();
+                if(!peers.isEmpty())
+                {
+                    System.out.println("Leaving host is --- " + hostname + " " + IPAddress + "\n");
 
-                    int removeIndex = 0;
-                    for(Peer peer : peers)
+                    for(Iterator<Peer> iter = peers.iterator(); iter.hasNext();)
                     {
-                        System.out.println("hostname = " + peer.getHost());
-                        System.out.println("IP = " + peer.getIP());
-
-                        if(peer.getHost().equals(hostname) && peer.getIP().equals(IPAddress))
-                        {
-                            peers.remove(removeIndex);
-                            break;
-                        }
-                        else
-                            removeIndex++;
+                        Peer p = iter.next();
+                        if(p.getIP().equals(IPAddress) || p.getHost().equals(hostname))
+                            iter.remove();
                     }
                 }
                 message += genRspMsg(method);
@@ -237,7 +241,6 @@ public class Server implements Sender, Receiver
                         e.printStackTrace();
                     }
                     System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
-                    System.out.println("Peer OBJ info = " + peers.get(0).getHost());
 
                     currClients.remove(this);
                     break;
