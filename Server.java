@@ -95,7 +95,7 @@ public class Server implements Sender, Receiver
                     for(Peer peer : peers)
                     {
                         if(!(search = peer.searchHash(queryName)).equals("File not found"))
-                            queryResponse += search + "\r\n";
+                            queryResponse += search + " " + peer.getHost() + " " + peer.getIP() + "\r\n";
                     }
 
                     if(search.equals("File not found"))
@@ -135,10 +135,13 @@ public class Server implements Sender, Receiver
                 break;
             case "QUER":
                 msg += "200 OK\r\n";
+                break;
             case "EXIT":
                 msg += "200 OK\r\nGoodbye!\r\n";
+                break;
             default:
                 msg += "400 ERROR\r\nRequest not understood - please try again.\r\n";
+                break;
         }
 
 //        msg += "\r\n\r\n\r\n";
