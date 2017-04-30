@@ -4,6 +4,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
 
 public class P2PServer
@@ -15,7 +17,7 @@ public class P2PServer
 	private static Scanner scan;
 	private static DatagramSocket srvSkt;
 	private static ArrayList<String> incPackets;
-	private static ArrayList<Peer> peers;
+	private static List<Peer> peers;
 	private static Scanner seq;
 	
 
@@ -89,7 +91,6 @@ public class P2PServer
                     
                     String answer = parseMsg(totalMsg);
                     System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
-                    System.out.println("Peer OBJ info = " + peers.get(0).getHost());
                     
                     totalMsg = null;
                     incPackets.clear();
@@ -128,21 +129,32 @@ public class P2PServer
 	public static String parseMsg(String msg) throws Exception
 	{
 		scan = new Scanner(msg);
-
 		String method = scan.next();
 		String hostInfo = scan.next();
 		scan.nextLine();
+		
+		Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
+		String hostname = hostScan.next();
+		String IPAddress = "/" + hostScan.next();
 
 		if(method.equals("INUP"))
 		{
-			//add all files to hash of (key, value) -> (hostname, song info)
+			// First check if peer already INUPed in past, delete if so
+			for (Iterator<Peer> iter = peers.iterator(); iter.hasNext(); ) 
+			{
+			    Peer p = iter.next();
+			    if (p.getIP().equals(IPAddress) || p.getHost().equals(hostname)) 
+			        iter.remove();
+			}
+			
+			// Then add all files to hash of (key, value) -> (hostname, song info)
 			peers.add(new Peer(hostInfo, msg));
 			return genRspMsg(method);
 		}
+		
 		else if(method.equals("QUER") && !peers.isEmpty())
 		{
 			//scan entire hashmap, looking at first scan.next() String for song name
-
 			String queryName = scan.nextLine();
 			String queryResponse = "";
 			String search = null;
@@ -162,33 +174,21 @@ public class P2PServer
 			//do something here with the response message.
 			return genRspMsg(method) + queryResponse;
 		}
+		
 		else if(method.equals("EXIT") && !peers.isEmpty())
 		{
-			//check hash for host, delete all values
-			Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
-			String hostname = hostScan.next();
-			String IPAddress = "/" + hostScan.next();
+			System.out.println("Leaving host is --- " + hostname + " " + IPAddress + "\n");
 			
-			int removeIndex = 0;
-
-			for(Peer peer : peers)
+			for (Iterator<Peer> iter = peers.iterator(); iter.hasNext(); ) 
 			{
-				
-				
-				System.out.println("hostname = " + peer.getHost());
-				System.out.println("IP = " + peer.getIP());
-				
-				if(peer.getHost().equals(hostname) && peer.getIP().equals(IPAddress))
-				{
-					peers.remove(removeIndex);
-					break;
-				}
-				else
-					removeIndex++;				
+			    Peer p = iter.next();
+			    if (p.getIP().equals(IPAddress) || p.getHost().equals(hostname)) 
+			        iter.remove();
 			}
 		
 			return genRspMsg(method);
 		}
+		
 		else
 		{
 			//error//
@@ -270,30 +270,17 @@ public class P2PServer
 	{
 		String msg = "";
 		
-		
 		if(method.equals("INUP"))
-		{
-			msg += "200 " + "OK" + "\r\n" + "Thank you for your contribution!\r\n\r\n$";	
-			
-		}
+			msg += "200 " + "OK" + "\r\n" + "Thank you for your contribution!\r\n\r\n";	
 		
 		else if(method.equals("QUER"))
-		{
 			msg += "200 " + "OK" + "\r\n";
-			
-		}
-		
+
 		else if(method.equals("EXIT"))
-		{
-			msg += "200 " + "OK" + "\r\n" + "Goodbye!\r\n\r\n$";
-			
-		}
-		
+			msg += "200 " + "OK" + "\r\n" + "Goodbye!\r\n\r\n";
+
 		else
-		{
-			msg += "400 " + "ERROR" + "\r\n" + "Request not understood - please try again\r\n\r\n$";
-			
-		}
+			msg += "400 " + "ERROR" + "\r\n" + "Request not understood - please try again\r\n\r\n";
 		
 		return msg;
 	}
