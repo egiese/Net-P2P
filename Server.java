@@ -16,8 +16,7 @@ public class Server implements Sender, Receiver
 {
     private int portNumber;
     private DatagramSocket serverSocket;
-    private ArrayList<Peer> peers;
-    private String clientList;
+    private static ArrayList<Peer> peers;
     private ArrayList<ClientHandler> currClients;
 
     public Server(int portNumber) throws Exception
@@ -26,6 +25,7 @@ public class Server implements Sender, Receiver
         this.serverSocket = new DatagramSocket(portNumber);
         System.out.println("UDP Server opened on port " + this.portNumber);
         currClients = new ArrayList<ClientHandler>();
+        peers = new ArrayList<Peer>();
     }
 
     public void serve() throws IOException
@@ -57,7 +57,89 @@ public class Server implements Sender, Receiver
         }
     }
 
+    public static String parseMsg(String msg) throws Exception
+    {
+        Scanner scan = new Scanner(msg);
+        String message = "";
+        String method = scan.next();
+        String hostInfo = scan.next();
+        scan.nextLine();
 
+        switch (method)
+        {
+            case "INUP":
+                peers.add(new Peer(hostInfo, msg));
+                message += genRspMsg(method);
+                break;
+            case "QUER":
+                if(!peers.isEmpty())
+                {
+                    String queryName = scan.nextLine();
+                    String queryResponse = "";
+                    String search = null;
+
+                    System.out.println("queryname = " + queryName);
+                    for(Peer peer : peers)
+                    {
+                        if(!(search = peer.searchHash(queryName)).equals("File not found"))
+                            queryResponse += search + "\r\n";
+                    }
+
+                    if(search.equals("File not found"))
+                        queryResponse += search + "\r\n";
+                    message += genRspMsg(method) + queryResponse;
+                }
+                break;
+            case "EXIT":
+                if(!peers.isEmpty()) {
+                    Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
+                    String hostname = hostScan.next();
+                    String IPAddress = "/" + hostScan.next();
+
+                    int removeIndex = 0;
+                    for(Peer peer : peers)
+                    {
+                        System.out.println("hostname = " + peer.getHost());
+                        System.out.println("IP = " + peer.getIP());
+
+                        if(peer.getHost().equals(hostname) && peer.getIP().equals(IPAddress))
+                        {
+                            peers.remove(removeIndex);
+                            break;
+                        }
+                        else
+                            removeIndex++;
+                    }
+                }
+                message += genRspMsg(method);
+                break;
+            default:
+                message += genRspMsg(method);
+                break;
+        }
+        return message + "\r\n\r\n";
+    }
+
+    public static String genRspMsg(String method) throws Exception
+    {
+        String msg = "";
+
+        switch(method)
+        {
+            case "INUP":
+                msg += "200 OK\r\nThank you for your contribution!\r\n";
+                break;
+            case "QUER":
+                msg += "200 OK\r\n";
+            case "EXIT":
+                msg += "200 OK\r\nGoodbye!\r\n";
+            default:
+                msg += "400 ERROR\r\nRequest not understood - please try again.\r\n";
+        }
+
+//        msg += "\r\n\r\n\r\n";
+        return msg;
+    }
 
     private class ClientHandler implements Runnable
     {
@@ -143,7 +225,20 @@ public class Server implements Sender, Receiver
 
                 if(incPackets.toString().contains("\r\n\r\n\r\n"))
                 {
-                    System.out.println(incPackets);
+                    totalMsg = Receiver.combinePackets(incPackets);
+                    totalMsg = totalMsg.substring(0, totalMsg.length() - 1);
+                    System.out.println("End of message.");
+                    System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
+                    System.out.println("ArrayList item size: " + totalMsg.length() + "\n");
+                    String answer = null;
+                    try {
+                        answer = parseMsg(totalMsg);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
+                    System.out.println("Peer OBJ info = " + peers.get(0).getHost());
+
                     currClients.remove(this);
                     break;
                 }
