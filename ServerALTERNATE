@@ -1,8 +1,11 @@
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
 
 public class P2PServer
@@ -14,8 +17,9 @@ public class P2PServer
 	private static Scanner scan;
 	private static DatagramSocket srvSkt;
 	private static ArrayList<String> incPackets;
-	private static ArrayList<Peer> peers;
+	private static List<Peer> peers;
 	private static Scanner seq;
+	
 
 	public static void main (String [] args) throws IOException
 	{
@@ -30,21 +34,18 @@ public class P2PServer
 		DatagramPacket sendPkt = null;
 
 		int currSeqNum = INIT_SEQ_NUM;
+		String totalMsg = "";
 		
-                String totalMsg = "";
-                
 		while(true)
 		{
 			// Receiving packets //
+			System.out.println("Waiting for packet on port " + PORT + "...\n");
 			srvSkt.receive(rcvPkt);
 			int rcvpktsize = rcvPkt.getLength();
 			int clientPort = rcvPkt.getPort();
 			InetAddress clientIP = rcvPkt.getAddress();
 			String message = new String(rcvPkt.getData());
-                        
 			scan = new Scanner(message);
-                        
-                        // Extract header length and seqNum from incoming packet //
 			int headerLength = scan.nextLine().length() + 2;
 			int sequenceNum = getSeqNum(message);
 			
@@ -52,7 +53,7 @@ public class P2PServer
 			{
 				System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
 				// Resend previous ACK
-				System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
+				System.out.println("Sending ACK for " + currSeqNum + " to " + clientIP + " on port " + clientPort + "\n");
 				String ACK = InetAddress.getLocalHost() + createACK(currSeqNum);
 				byte[] sendData = new byte[ACK.length()];
 				sendData = ACK.getBytes();
@@ -61,16 +62,11 @@ public class P2PServer
 				continue;
 			}
 			
-			// Increment sequence number //
+			// Increment sequence number
 			currSeqNum = (currSeqNum + 1) % SEQ_NUM_WIN;
-                        
-                        // Add packet to ArrayList of packets //
 			incPackets.add(message.substring(headerLength, rcvpktsize));
-                        
-                        
-
 			
-                        
+			
 			// ACKing packets //
 			System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
 			String ACK = InetAddress.getLocalHost() + createACK(sequenceNum);
@@ -79,43 +75,42 @@ public class P2PServer
 			sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, clientPort);
 			srvSkt.send(sendPkt);
 			
-                        
-                        // Check if the packet is the last packet of the message //
-                        // Then create the total message, and make a peer object //
-                        // adding it to peer list, then generate a response msg  //
-                        try
-                        {
-                            if(isEndOfMsg(message,rcvpktsize))
-                            {
-                                totalMsg = combinePackets(incPackets);
-                                totalMsg = totalMsg.substring(0, totalMsg.length()-1);
-                                System.out.println("End of message");
-                                System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
-                                System.out.println("arraylist item size: " + totalMsg.length() + "\n");
-                                
-                                String answer = parseMsg(totalMsg);
-                                System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
-                                System.out.println("Peer OBJ info = " + peers.get(0).getHost());
-                                
-                                totalMsg = null;
-                                incPackets.clear();
-                                currSeqNum = 0;
-                            }
-                            
-                        }
-                        catch (Exception e)
-                        {
-                            e.printStackTrace();
-                        }
+			
+            // Check if the packet is the last packet of the message //
+            // Then create the total message, and make a peer object //
+            // adding it to peer list, then generate a response msg  //
+            try
+            {
+                if(isEndOfMsg(message,rcvpktsize))
+                {
+                    totalMsg = combinePackets(incPackets);
+                    totalMsg = totalMsg.substring(0, totalMsg.length()-1);
+                    System.out.println("End of message");
+                    System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
+                    System.out.println("arraylist item size: " + totalMsg.length() + "\n");
+                    
+                    String answer = parseMsg(totalMsg);
+                    System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
+                    
+                    totalMsg = null;
+                    incPackets.clear();
+                    currSeqNum = 0;
+                }
+                
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
 		}
 	}
 	
-        public static boolean isEndOfMsg(String msg, int msgLen)
-        {
-            return msg.charAt(msgLen-1) == ('$');
-        }
-        
-        
+	
+    public static boolean isEndOfMsg(String msg, int msgLen)
+    {
+        return msg.charAt(msgLen-1) == ('$');
+    }
+	
 	/*
 	 * ---------------------------------------------------------------------------------------------
 	 * Method to parse a message String (raw message data) into its components
@@ -134,61 +129,66 @@ public class P2PServer
 	public static String parseMsg(String msg) throws Exception
 	{
 		scan = new Scanner(msg);
-
 		String method = scan.next();
 		String hostInfo = scan.next();
-                // flush scanner
-                scan.nextLine();
+		scan.nextLine();
+		
+		Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
+		String hostname = hostScan.next();
+		String IPAddress = "/" + hostScan.next();
 
 		if(method.equals("INUP"))
 		{
-			//add all files to hash of (key, value) -> (hostname, song info)
+			// First check if peer already INUPed in past, delete if so
+			for (Iterator<Peer> iter = peers.iterator(); iter.hasNext(); ) 
+			{
+			    Peer p = iter.next();
+			    if (p.getIP().equals(IPAddress) || p.getHost().equals(hostname)) 
+			        iter.remove();
+			}
+			
+			// Then add all files to hash of (key, value) -> (hostname, song info)
 			peers.add(new Peer(hostInfo, msg));
 			return genRspMsg(method);
 		}
-		else if(method.equals("QUER"))
+		
+		else if(method.equals("QUER") && !peers.isEmpty())
 		{
 			//scan entire hashmap, looking at first scan.next() String for song name
 			String queryName = scan.nextLine();
 			String queryResponse = "";
 			String search = null;
 			
-                        System.out.println("queryname = " + queryName);
-                        
+			System.out.println("queryname = " + queryName);
+			
 			for(Peer peer : peers)
 			{
-                            if(!(search = peer.searchHash(queryName)).equals("File not found"))
-                                    queryResponse += search + "\r\n";
-                            
+				if(!(search = peer.searchHash(queryName)).equals("File not found"))
+					queryResponse += search + "\r\n";
+				
 			}
+
+			if(search.equals("File not found"))
+                queryResponse = "File not found\r\n\r\n$";
 			
-                        if(search == null)
-                            search = "File not found";
-                            
 			//do something here with the response message.
 			return genRspMsg(method) + queryResponse;
 		}
-		else if(method.equals("EXIT"))
+		
+		else if(method.equals("EXIT") && !peers.isEmpty())
 		{
-			//check hash for host, delete all values
-			Scanner hostScan = new Scanner(hostInfo).useDelimiter("/");
-			String hostname = hostScan.next();
-			String IPAddress = hostScan.next();
-			int removeIndex = 0;
-
-			for(Peer peer : peers)
+			System.out.println("Leaving host is --- " + hostname + " " + IPAddress + "\n");
+			
+			for (Iterator<Peer> iter = peers.iterator(); iter.hasNext(); ) 
 			{
-				if(peer.getHost().equals(hostname) && peer.getIP().equals(IPAddress))
-				{
-					peers.remove(removeIndex);
-					break;
-				}
-				else
-					removeIndex++;				
+			    Peer p = iter.next();
+			    if (p.getIP().equals(IPAddress) || p.getHost().equals(hostname)) 
+			        iter.remove();
 			}
 		
 			return genRspMsg(method);
 		}
+		
 		else
 		{
 			//error//
@@ -271,16 +271,16 @@ public class P2PServer
 		String msg = "";
 		
 		if(method.equals("INUP"))
-			msg += "OK " + "200" + "\r\n" + "Thank you for your contribution!\r\n\r\n$";	
-			
+			msg += "200 " + "OK" + "\r\n" + "Thank you for your contribution!\r\n\r\n";	
+		
 		else if(method.equals("QUER"))
-			msg += "OK " + "200" + "\r\n";
-		
+			msg += "200 " + "OK" + "\r\n";
+
 		else if(method.equals("EXIT"))
-			msg += "OK " + "200" + "\r\n" + "Goodbye!\r\n\r\n$";
-		
+			msg += "200 " + "OK" + "\r\n" + "Goodbye!\r\n\r\n";
+
 		else
-			msg += "ERROR" + "400" + "\r\n" + "Request not understood - please try again\r\n\r\n$";
+			msg += "400 " + "ERROR" + "\r\n" + "Request not understood - please try again\r\n\r\n";
 		
 		return msg;
 	}

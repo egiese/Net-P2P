@@ -50,7 +50,7 @@ public class P2PServer
 			{
 				System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
 				// Resend previous ACK
-				System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
+				System.out.println("Sending ACK for " + currSeqNum + " to " + clientIP + " on port " + clientPort + "\n");
 				String ACK = InetAddress.getLocalHost() + createACK(currSeqNum);
 				byte[] sendData = new byte[ACK.length()];
 				sendData = ACK.getBytes();
