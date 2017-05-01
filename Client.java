@@ -55,7 +55,7 @@ public class Client implements Sender, Receiver
                 System.out.println("Connection interrupted. Waiting for resumed connection.");
             }
 
-            System.out.println("Sending following packet " + packetCount + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
+            System.out.println("Sending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
             System.out.println("Waiting for ACK...");
 
             // Receiving ACKs
@@ -238,10 +238,10 @@ public class Client implements Sender, Receiver
                 break;
             case "EXIT":
                 msg += "EXIT " + InetAddress.getLocalHost() + "\r\n";
-                msg += "$$$$$$$$";
+                msg += "$$$$$$$$\r\n";
                 break;
         }
-        msg += "\r\n\r\n\r\n";
+        msg += "\r\n\r\n";
 
         return msg;
     }

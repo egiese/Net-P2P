@@ -281,7 +281,7 @@ public class Server implements Sender, Receiver
                     System.out.println("Connection interrupted. Waiting for resumed connection.");
                 }
 
-                System.out.println("Sending following packet " + packetCount + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
+                System.out.println("Sending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
                 System.out.println("Waiting for ACK...");
 
                 // Receiving ACKs
