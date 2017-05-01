@@ -1,5 +1,6 @@
 import java.io.File;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 /**
@@ -132,12 +133,70 @@ public class Client implements Sender, Receiver
             System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
             packetCount++;
         }
-//        this.receiveMessage();
+        this.receiveMessage();
     }
 
     public void receiveMessage() throws Exception
     {
+        ArrayList<String> incPackets = new ArrayList<String>();
+        byte[] rcvData = new byte[100];
+        DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+        DatagramPacket sendPkt = null;
 
+        int currSeqNum = Receiver.INIT_SEQ_NUM;
+        String totalMsg = "";
+
+        while(true)
+        {
+            System.out.println("Waiting for packet from server " + serverIP.getHostAddress());
+            socket.receive(rcvPkt);
+            int rcvpktsize = rcvPkt.getLength();
+            int serverPort = rcvPkt.getPort();
+            String message = new String(rcvPkt.getData());
+            Scanner scan = new Scanner(message);
+            int headerLength = scan.nextLine().length() + 2;
+            int sequenceNum = Sender.getSeqNum(message);
+            System.out.println("ACK received! Sequence number " + sequenceNum);
+
+            if(currSeqNum != sequenceNum)
+            {
+                System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
+                //Resend previous ACK
+                System.out.println("Sending ACK with sequence number " + currSeqNum + " to " + serverIP + " on port " + serverPort);
+                String ACK = null;
+                ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
+                byte[] sendData = new byte[ACK.length()];
+                sendData = ACK.getBytes();
+                sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
+                socket.send(sendPkt);
+                continue;
+            }
+
+            //Incremement Sequence Number
+            currSeqNum = (currSeqNum + 1) % Receiver.SEQ_NUM_WIN;
+            incPackets.add(message.substring(headerLength, rcvpktsize));
+
+            // ACKing Packets
+            System.out.println("Sending ACK with sequence number " + sequenceNum + " to " + serverIP + " on port " + serverPort + "\n");
+            String ACK = null;
+            ACK = InetAddress.getLocalHost() + Receiver.createACK(sequenceNum);
+
+            byte[] sendData = ACK.getBytes();
+            sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
+            socket.send(sendPkt);
+
+            if(incPackets.toString().contains("\r\n\r\n\r\n"))
+            {
+                totalMsg = Receiver.combinePackets(incPackets);
+                totalMsg = totalMsg.substring(0, totalMsg.length() - 1);
+                System.out.println("End of message.");
+                System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
+                System.out.println("ArrayList item size: " + totalMsg.length() + "\n");
+                System.out.println("SRV RESPONSE = \n{\n" + totalMsg + "\n}\n");
+
+                break;
+            }
+        }
     }
 
     /*
