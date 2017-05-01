@@ -12,18 +12,19 @@ public class Client implements Sender, Receiver
     private int portNumber;
     private String serverHostname;
     private InetAddress serverIP;
-    private DatagramSocket socket;
+    private DatagramSocket sendSocket;
+    private DatagramSocket rcvSocket;
 
     public Client(int portNumber, String receiverHostname) throws Exception
     {
         this.portNumber = portNumber;
         this.serverHostname = receiverHostname;
         this.serverIP = InetAddress.getByName(this.serverHostname);
-        this.socket = new DatagramSocket();
     }
 
     public void sendMessage(String msgType) throws Exception
     {
+        this.sendSocket = new DatagramSocket();
         byte[] rcvData = new byte[1024];
 
         System.out.println("Attempting to send to " + serverIP);
@@ -49,7 +50,7 @@ public class Client implements Sender, Receiver
             DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, portNumber);
 
             try{
-                socket.send(sendPkt);
+                sendSocket.send(sendPkt);
             }
             catch (SocketException e){
                 System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -63,13 +64,13 @@ public class Client implements Sender, Receiver
             while(true)
             {
                 // Start Timer
-                socket.setSoTimeout(timeoutInterval);
+                sendSocket.setSoTimeout(timeoutInterval);
                 double startTime = System.nanoTime() / 1000000;
                 rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 
                 // Try to receive a packet
                 try{
-                    socket.receive(rcvPkt);
+                    sendSocket.receive(rcvPkt);
                 }
                 // If timeout
                 catch(SocketTimeoutException e){
@@ -81,7 +82,7 @@ public class Client implements Sender, Receiver
                     System.out.println("Timeout! Resending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
                     // Resend packet
                     try{
-                        socket.send(sendPkt);
+                        sendSocket.send(sendPkt);
                     }
                     catch (SocketException se){
                         System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -105,7 +106,7 @@ public class Client implements Sender, Receiver
                     continue;
                 }
                 // Turn off timer
-                socket.setSoTimeout(0);
+                sendSocket.setSoTimeout(0);
                 // Increment sequence number
                 currSeqNum = (currSeqNum + 1) % Sender.SEQ_NUM_WIN;
                 // End loop
@@ -127,10 +128,12 @@ public class Client implements Sender, Receiver
             packetCount++;
         }
         this.receiveMessage();
+        sendSocket.close();
     }
 
     public void receiveMessage() throws Exception
     {
+        this.rcvSocket = new DatagramSocket(portNumber);
         ArrayList<String> incPackets = new ArrayList<String>();
         byte[] rcvData = new byte[100];
         DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
@@ -142,7 +145,7 @@ public class Client implements Sender, Receiver
         while(true)
         {
             System.out.println("Waiting for packet from server " + serverIP.getHostAddress());
-            socket.receive(rcvPkt);
+            rcvSocket.receive(rcvPkt);
             int rcvpktsize = rcvPkt.getLength();
             int serverPort = rcvPkt.getPort();
             String message = new String(rcvPkt.getData());
@@ -161,7 +164,7 @@ public class Client implements Sender, Receiver
                 byte[] sendData = new byte[ACK.length()];
                 sendData = ACK.getBytes();
                 sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
-                socket.send(sendPkt);
+                rcvSocket.send(sendPkt);
                 continue;
             }
 
@@ -176,7 +179,7 @@ public class Client implements Sender, Receiver
 
             byte[] sendData = ACK.getBytes();
             sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
-            socket.send(sendPkt);
+            rcvSocket.send(sendPkt);
 
             if(incPackets.toString().contains("\r\n\r\n\r\n"))
             {
@@ -190,6 +193,7 @@ public class Client implements Sender, Receiver
                 break;
             }
         }
+        rcvSocket.close();
     }
 
     /*

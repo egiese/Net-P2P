@@ -47,7 +47,7 @@ public class Server implements Sender, Receiver
             if(!temp)
             {
                 BlockingQueue<DatagramPacket> queue = new LinkedBlockingQueue<DatagramPacket>();
-                ClientHandler cH = new ClientHandler(packet.getAddress(), queue);
+                ClientHandler cH = new ClientHandler(packet.getAddress(), packet.getPort(), queue);
                 new Thread(cH).start();
                 queue.offer(packet);
                 currClients.add(cH);
@@ -147,12 +147,14 @@ public class Server implements Sender, Receiver
     private class ClientHandler implements Runnable
     {
         private InetAddress clientIP;
+        private int clientPort;
         private BlockingQueue<DatagramPacket> queue;
         private ArrayList<String> incPackets;
 
-        public ClientHandler(InetAddress clientIP, BlockingQueue<DatagramPacket> queue)
+        public ClientHandler(InetAddress clientIP, int clientPort ,BlockingQueue<DatagramPacket> queue)
         {
             this.clientIP = clientIP;
+            this.clientPort = clientPort;
             this.queue = queue;
             this.incPackets = new ArrayList<String>();
             System.out.println("New Thread!");
@@ -177,7 +179,6 @@ public class Server implements Sender, Receiver
                     e.printStackTrace();
                 }
                 int rcvpktsize = rcvPkt.getLength();
-                int clientPort = rcvPkt.getPort();
                 String message = new String(rcvPkt.getData());
                 Scanner scan = new Scanner(message);
                 int headerLength = scan.nextLine().length() + 2;
@@ -254,6 +255,7 @@ public class Server implements Sender, Receiver
 
         public void sendMessage(String msg) throws Exception
         {
+            DatagramSocket clientSocket = new DatagramSocket();
             byte[] rcvData = new byte[1024];
             String packets[] = Sender.makePacket(msg);
 
@@ -275,7 +277,7 @@ public class Server implements Sender, Receiver
                 DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, portNumber);
 
                 try{
-                    serverSocket.send(sendPkt);
+                    clientSocket.send(sendPkt);
                 }
                 catch (SocketException e){
                     System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -289,13 +291,13 @@ public class Server implements Sender, Receiver
                 while(true)
                 {
                     // Start Timer
-                    serverSocket.setSoTimeout(timeoutInterval);
+                    clientSocket.setSoTimeout(timeoutInterval);
                     double startTime = System.nanoTime() / 1000000;
                     rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 
                     // Try to receive a packet
                     try{
-                        serverSocket.receive(rcvPkt);
+                        clientSocket.receive(rcvPkt);
                     }
                     // If timeout
                     catch(SocketTimeoutException e){
@@ -307,7 +309,7 @@ public class Server implements Sender, Receiver
                         System.out.println("Timeout! Resending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
                         // Resend packet
                         try{
-                            serverSocket.send(sendPkt);
+                            clientSocket.send(sendPkt);
                         }
                         catch (SocketException se){
                             System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -331,7 +333,7 @@ public class Server implements Sender, Receiver
                         continue;
                     }
                     // Turn off timer
-                    serverSocket.setSoTimeout(0);
+                    clientSocket.setSoTimeout(0);
                     // Increment sequence number
                     currSeqNum = (currSeqNum + 1) % Sender.SEQ_NUM_WIN;
                     // End loop
@@ -352,6 +354,7 @@ public class Server implements Sender, Receiver
                 System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
                 packetCount++;
             }
+            clientSocket.close();
         }
     }
 }
