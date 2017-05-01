@@ -74,11 +74,11 @@ public class Client implements Sender, Receiver
                 // If timeout
                 catch(SocketTimeoutException e){
                     double endTime = System.nanoTime() / 1000000;
-                    System.out.println("Timeout! Resending.");
                     // Recalculate timeout interval
                     devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
                     estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
                     timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
+                    System.out.println("Timeout! Resending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
                     // Resend packet
                     try{
                         socket.send(sendPkt);
@@ -101,13 +101,6 @@ public class Client implements Sender, Receiver
                 if(newSeqNum != currSeqNum)
                 {
                     System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
-                    // Resend packet
-                    try{
-                        socket.send(sendPkt);
-                    }
-                    catch (SocketException se){
-                        System.out.println("Connection interrupted. Waiting for resumed connection.");
-                    }
                     // Restart loop
                     continue;
                 }
