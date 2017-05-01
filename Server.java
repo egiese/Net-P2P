@@ -1,9 +1,6 @@
 import javax.xml.crypto.Data;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -170,6 +167,7 @@ public class Server implements Sender, Receiver
 
             int currSeqNum = Receiver.INIT_SEQ_NUM;
             String totalMsg = "";
+            String answer = null;
 
             while(true)
             {
@@ -229,8 +227,6 @@ public class Server implements Sender, Receiver
                     e.printStackTrace();
                 }
 
-//                System.out.println(incPackets.get(incPackets.size() - 1));
-
                 if(incPackets.toString().contains("\r\n\r\n\r\n"))
                 {
                     totalMsg = Receiver.combinePackets(incPackets);
@@ -238,7 +234,6 @@ public class Server implements Sender, Receiver
                     System.out.println("End of message.");
                     System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
                     System.out.println("ArrayList item size: " + totalMsg.length() + "\n");
-                    String answer = null;
                     try {
                         answer = parseMsg(totalMsg);
                     } catch (Exception e) {
@@ -249,6 +244,121 @@ public class Server implements Sender, Receiver
                     currClients.remove(this);
                     break;
                 }
+            }
+
+            try {
+                this.sendMessage(answer);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void sendMessage(String msg) throws Exception
+        {
+            byte[] rcvData = new byte[1024];
+            String packets[] = Sender.makePacket(msg);
+
+            double estRTT = Sender.INIT_EST_RTT;
+            double devRTT = Sender.INIT_DEV_RTT;
+            devRTT = Sender.calcDevRTT(0.0, Sender.INIT_EST_RTT, estRTT, devRTT);
+            estRTT = Sender.calcEstimatedRTT(0.0, Sender.INIT_EST_RTT, estRTT);
+            int timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
+
+            int currSeqNum = Sender.INIT_SEQ_NUM;
+            int packetCount = 0;
+
+            // Attempt to send pakets via UDP
+            for(String p : packets)
+            {
+                // Sending packets
+                byte[] sendData = new byte[p.length()];
+                sendData = p.getBytes();
+                DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, portNumber);
+
+                try{
+                    serverSocket.send(sendPkt);
+                }
+                catch (SocketException e){
+                    System.out.println("Connection interrupted. Waiting for resumed connection.");
+                }
+
+                System.out.println("Sending following packet " + packetCount + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
+                System.out.println("Waiting for ACK...");
+
+                // Receiving ACKs
+                DatagramPacket rcvPkt;
+                while(true)
+                {
+                    // Start Timer
+                    serverSocket.setSoTimeout(timeoutInterval);
+                    double startTime = System.nanoTime() / 1000000;
+                    rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+
+                    // Try to receive a packet
+                    try{
+                        serverSocket.receive(rcvPkt);
+                    }
+                    // If timeout
+                    catch(SocketTimeoutException e){
+                        double endTime = System.nanoTime() / 1000000;
+                        System.out.println("Timeout! Resending.");
+                        // Recalculate timeout interval
+                        devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
+                        estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
+                        timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
+                        // Resend packet
+                        try{
+                            serverSocket.send(sendPkt);
+                        }
+                        catch (SocketException se){
+                            System.out.println("Connection interrupted. Waiting for resumed connection.");
+                        }
+                        // Restart loop
+                        continue;
+                    }
+                    double endTime = System.nanoTime() / 1000000;
+                    //Recalculate timeout interval
+                    devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
+                    estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
+                    timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
+                    // Check new sequence number
+                    int newSeqNum = Sender.getSeqNum(new String(rcvPkt.getData()));
+                    System.out.println("ACK received! Sequence number " + newSeqNum);
+                    // If incorrect sequence number
+                    if(newSeqNum != currSeqNum)
+                    {
+                        System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
+                        // Resend packet
+                        try{
+                            serverSocket.send(sendPkt);
+                        }
+                        catch (SocketException se){
+                            System.out.println("Connection interrupted. Waiting for resumed connection.");
+                        }
+                        // Restart loop
+                        continue;
+                    }
+                    // Turn off timer
+                    serverSocket.setSoTimeout(0);
+                    // Increment sequence number
+                    currSeqNum = (currSeqNum + 1) % Sender.SEQ_NUM_WIN;
+                    // End loop
+                    break;
+                }
+
+                String ACK = new String(rcvPkt.getData());
+                int sequenceNum = Sender.getSeqNum(ACK);
+                int rcvpktsize = rcvPkt.getLength();
+                InetAddress clientIP = rcvPkt.getAddress();
+                int clientPort = rcvPkt.getPort();
+                String ack = new String(rcvPkt.getData());
+
+                System.out.println("ACK = \n[\n" + ack + "\n]");
+                System.out.println("Sequence number = " + sequenceNum);
+                System.out.println("Sender IP address: " + clientIP);
+                System.out.println("Sender port: " + clientPort);
+                System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
+                packetCount++;
             }
         }
     }
