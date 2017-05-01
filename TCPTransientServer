@@ -1,22 +1,120 @@
-import java.net.*;
 import java.io.*;
-public class TCPTransientServer 
-{
-   public static void main (String [] args ) throws IOException 
-   {
-        
-		ServerSocket serverSocket = new ServerSocket(15000);
-		Socket socket = serverSocket.accept();
-		System.out.println("Connection accepted : " + socket);
-		File transferFile = new File ("C:\\Users\\Public\\Music\\Sample Music\\Kalimba.mp3");
-		byte [] bytearray = new byte [(int)transferFile.length()];
-		FileInputStream fin = new FileInputStream(transferFile);
-		BufferedInputStream bin = new BufferedInputStream(fin);
-		bin.read(bytearray,0,bytearray.length);
-		OutputStream os = socket.getOutputStream();
-		System.out.println("Sending Files..");
-		os.write(bytearray,0,bytearray.length);
-		os.flush(); socket.close();
-		System.out.println("File transfer complete");
-   }
+import java.net.*;
+
+/**
+ * Simple TCP server thread that starts up and waits for TCP connections and
+ * echos what is sent capitalized. This is an adaption of the code provided by
+ * the Computer Networking: A Top Down Approach book by Kurose and Ross
+ *
+ * @author Chad Williams
+ */
+public class TCPTransientServer extends Thread {
+
+  private int port;
+
+  public TCPTransientServer(String name, int port) {
+    super(name);
+    this.port = port;
+  }
+
+  String clientQuery;
+  String answer;
+  /**
+   * Start the thread to begin listening
+   */
+  public void run() {
+    ServerSocket serverSocket = null;
+    try {
+      
+      String clientResponse;
+      serverSocket = new ServerSocket(this.port);
+      //while (true) {
+        System.out.println("SERVER accepting connections");
+        Socket clientConnectionSocket = serverSocket.accept();
+        System.out.println("SERVER accepted connection (single threaded so others wait)");
+
+        // This is regarding the server state of the connection
+        while (clientConnectionSocket.isConnected() && !clientConnectionSocket.isClosed()) {
+          BufferedReader inFromClient = new BufferedReader(new InputStreamReader(clientConnectionSocket.getInputStream()));
+          DataOutputStream outToClient = new DataOutputStream(clientConnectionSocket.getOutputStream());
+          clientQuery = inFromClient.readLine();
+          answer = "500 PROBLEM";
+          
+          try{
+          File f = new File(clientQuery);
+          if(f.exists())
+              answer = "200 OK";
+          else
+          	  answer = "404 NOT FOUND";
+          
+          }
+          catch(Exception e)
+          {
+        	  System.out.println("File error");
+          }
+          
+          
+          // Note if this returns null it means the client closed the connection
+          if (clientQuery != null) {
+            System.out.println("SERVER Received: " + clientQuery);
+            clientResponse = answer + '\n';
+            System.out.println("SERVER responding: " + clientResponse);
+            outToClient.writeBytes(clientResponse);
+            
+            
+            if(answer.equals("200 OK"))
+            {
+	            System.out.println("Server transfering...");
+	            try
+	            {
+	            	System.out.println("Client query = " + clientQuery);
+	        		File transferFile = new File (clientQuery);
+	        		System.out.println("file length = " + transferFile.length() );
+	        		System.out.println("file name = " + transferFile.getName() );
+	        		System.out.println("file path = " + transferFile.getPath() );
+
+	        		
+	        		
+	        		
+	        		
+	        		byte [] bytearray = new byte [(int)transferFile.length()];
+	        		FileInputStream fin = new FileInputStream(transferFile);
+	        		BufferedInputStream bin = new BufferedInputStream(fin);
+	        		bin.read(bytearray,0,bytearray.length);
+	        		OutputStream os = clientConnectionSocket.getOutputStream();
+	        		System.out.println("Sending Files..");
+	        		os.write(bytearray,0,bytearray.length);
+	        		os.flush(); 
+	        		clientConnectionSocket.close();
+	        		bin.close();
+	        		System.out.println("File transfer complete");
+	            }
+	            catch(Exception e)
+	            {
+	            	e.printStackTrace();
+	            	System.out.println("Transfer error");
+	            }
+          }
+
+          } else {
+            clientConnectionSocket.close();
+            System.out.println("SERVER client connection closed");
+          }
+        }
+      //}
+    } catch (Exception e) {
+      e.printStackTrace();
+     {
+        try {
+          serverSocket.close();
+        } catch (IOException ioe) {
+          // ignore
+        }
+      }
+    }
+    
+    
+    	
+
+  }
 }
