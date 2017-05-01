@@ -1,39 +1,104 @@
-import java.net.*;
-import java.util.Scanner;
 import java.io.*;
+import java.net.*;
 
-public class TCPClient 
-{
-	   public static void main (String [] args ) throws IOException 
-	   {
-	        int filesize=999999999;
-	        int bytesRead;
-	        int currentTot = 0;
-	        
-	        
-	        System.out.println("Enter destination filename");
-	        Scanner destFile = new Scanner(System.in);
-	        String fileName = destFile.nextLine();
-	        
-	        
-	        Socket socket = new Socket("127.0.0.1",15000);
-	        byte [] bytearray = new byte [filesize];
-	        InputStream is = socket.getInputStream();
-	        FileOutputStream fos = new FileOutputStream(fileName);
-	        BufferedOutputStream bos = new BufferedOutputStream(fos);
-	        bytesRead = is.read(bytearray,0,bytearray.length);
-	        currentTot = bytesRead;
-	        
-	        do 
+/**
+ * Simple client connects sends a sentence periodically and outputs the
+ * response. This is an adaption of the code provided by the Computer
+ * Networking: A Top Down Approach book by Kurose and Ross
+ *
+ * @author Chad Williams
+ */
+public class TCPClient extends Thread {
+
+  private int serverPort;
+  private String serverIP;
+
+  public TCPClient(String name, String serverIP, int serverPort) {
+    super(name);
+    this.serverPort = serverPort;
+    this.serverIP = serverIP;
+  }
+
+  /**
+   * Start the thread to connect and begin sending
+   */
+  @Override
+  public void run() {
+    Socket clientSocket = null;
+    int filesize=999999999;
+    int bytesRead;
+    int currentTot = 0;
+    
+    
+    
+    
+    try {
+      String sentence;
+      String storage;
+      String modifiedSentence;
+      System.out.println("CLIENT opening socket");
+      clientSocket = new Socket(serverIP, serverPort);
+      System.out.println("CLIENT connected to server");
+      DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+      BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+      
+        sentence = "C:\\Users\\Public\\Music\\Sample Music\\Sleep Away.mp3";
+        storage = "C:\\Users\\Kookus\\workspace\\490_TCP\\Sleep Away.mp3";
+        System.out.println(this.getName() + ": sending '" + sentence + "'");
+        outToServer.writeBytes(sentence + '\n');
+        modifiedSentence = inFromServer.readLine();
+
+        System.out.println(this.getName() + " received from server: " + modifiedSentence);
+        Thread.sleep(1500);
+        
+        
+        if(modifiedSentence.equals("200 OK"))
+        {
+	        System.out.println("Attempting to download file!");
+	        try
 	        {
-	        	bytesRead = is.read(bytearray, currentTot, (bytearray.length-currentTot));
-	            if(bytesRead >= 0) currentTot += bytesRead;
-            }
-	        while(bytesRead > -1);
-	        
-	        bos.write(bytearray, 0 , currentTot);
-	        bos.flush();
-	        bos.close();
-	        socket.close();
-	    }
-	}
+		        byte [] bytearray = new byte [filesize];
+		        InputStream is = clientSocket.getInputStream();
+		        FileOutputStream fos = new FileOutputStream(storage);
+		        BufferedOutputStream bos = new BufferedOutputStream(fos);
+		        bytesRead = is.read(bytearray,0,bytearray.length);
+		        currentTot = bytesRead;
+		        
+		        do 
+		        {
+		        	bytesRead = is.read(bytearray, currentTot, (bytearray.length-currentTot));
+		            if(bytesRead >= 0) currentTot += bytesRead;
+		        }
+		        while(bytesRead > -1);
+		        
+		        bos.write(bytearray, 0 , currentTot);
+		        bos.flush();
+		        bos.close();
+		        System.out.println("Download complete!");
+	        }
+	        catch (Exception e)
+	        {
+	        	System.out.println("transfer error");
+	        	e.printStackTrace();
+	        }
+        }
+        else if(modifiedSentence.equals("404 NOT FOUND"))
+        {
+        	System.out.println("File not found - please a different file or host");
+        }
+        	
+  
+      clientSocket.close();
+      System.out.println(this.getName() + " closed connection to server");
+    } catch (Exception e) {
+      e.printStackTrace();
+      try {
+        if (clientSocket != null) {
+          clientSocket.close();
+        }
+      } catch (Exception cse) {
+        // ignore exception here
+      }
+    }
+  }
+}
