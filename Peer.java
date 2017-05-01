@@ -1,3 +1,4 @@
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Scanner;
 
@@ -20,7 +21,7 @@ public class Peer
     	// Flush scanner
     	scan.nextLine();
     	hostname = hostScan.next();
-    	IPAddress = hostScan.next();
+    	IPAddress = "/" + hostScan.next();
         hashMap = new LinkedList[numEntries];
         
         for(int i = 0; i < numEntries; i++)
@@ -71,13 +72,20 @@ public class Peer
         {
             for(int i = 0; i < numEntries; i++)
             {
-                for(String song : hashMap[i])
-                {
-                	songScan = new Scanner(song);
-                	String fileName = songScan.next();
-                    if(fileName.contains(query))
-                    	return song;
-    			}
+            	try
+            	{
+	                for(String song : hashMap[i])
+	                {
+	                	songScan = new Scanner(song);
+	                	String fileName = songScan.next();
+	                    if(fileName.contains(query))
+	                    	return song;
+	    			}
+            	}
+	            catch(Exception e)
+            	{
+	            	System.out.println("");
+            	}
             }
         }
         
