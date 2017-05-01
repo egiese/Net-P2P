@@ -1,7 +1,10 @@
+
 import java.io.File;
+import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Created by Simon on 4/26/17.
@@ -12,19 +15,18 @@ public class Client implements Sender, Receiver
     private int portNumber;
     private String serverHostname;
     private InetAddress serverIP;
-    private DatagramSocket sendSocket;
-    private DatagramSocket rcvSocket;
+    private DatagramSocket socket;
 
     public Client(int portNumber, String receiverHostname) throws Exception
     {
         this.portNumber = portNumber;
         this.serverHostname = receiverHostname;
         this.serverIP = InetAddress.getByName(this.serverHostname);
+        this.socket = new DatagramSocket();
     }
 
     public void sendMessage(String msgType) throws Exception
     {
-        this.sendSocket = new DatagramSocket();
         byte[] rcvData = new byte[1024];
 
         System.out.println("Attempting to send to " + serverIP);
@@ -39,7 +41,6 @@ public class Client implements Sender, Receiver
         int timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
 
         int currSeqNum = Sender.INIT_SEQ_NUM;
-        int packetCount = 0;
 
         // Attempt to send pakets via UDP
         for(String p : packets)
@@ -50,13 +51,13 @@ public class Client implements Sender, Receiver
             DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, portNumber);
 
             try{
-                sendSocket.send(sendPkt);
+                socket.send(sendPkt);
             }
             catch (SocketException e){
                 System.out.println("Connection interrupted. Waiting for resumed connection.");
             }
 
-            System.out.println("Sending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
+            System.out.println("Sending following packet with sequence number " + Sender.getSeqNum(p) + "\n{\n" + p + "\n}\n");
             System.out.println("Waiting for ACK...");
 
             // Receiving ACKs
@@ -64,25 +65,25 @@ public class Client implements Sender, Receiver
             while(true)
             {
                 // Start Timer
-                sendSocket.setSoTimeout(timeoutInterval);
+                socket.setSoTimeout(timeoutInterval);
                 double startTime = System.nanoTime() / 1000000;
                 rcvPkt = new DatagramPacket(rcvData, rcvData.length);
 
                 // Try to receive a packet
                 try{
-                    sendSocket.receive(rcvPkt);
+                    socket.receive(rcvPkt);
                 }
                 // If timeout
                 catch(SocketTimeoutException e){
                     double endTime = System.nanoTime() / 1000000;
+                    System.out.println("Timeout!");
                     // Recalculate timeout interval
                     devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
                     estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
                     timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
-                    System.out.println("Timeout! Resending following packet " + (packetCount + 1) + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
                     // Resend packet
                     try{
-                        sendSocket.send(sendPkt);
+                        socket.send(sendPkt);
                     }
                     catch (SocketException se){
                         System.out.println("Connection interrupted. Waiting for resumed connection.");
@@ -91,22 +92,29 @@ public class Client implements Sender, Receiver
                     continue;
                 }
                 double endTime = System.nanoTime() / 1000000;
+                System.out.println("ACK received!");
                 //Recalculate timeout interval
                 devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
                 estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
                 timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
                 // Check new sequence number
                 int newSeqNum = Sender.getSeqNum(new String(rcvPkt.getData()));
-                System.out.println("ACK received! Sequence number " + newSeqNum);
                 // If incorrect sequence number
                 if(newSeqNum != currSeqNum)
                 {
                     System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + newSeqNum + ".");
+                    // Resend packet
+                    try{
+                        socket.send(sendPkt);
+                    }
+                    catch (SocketException se){
+                        System.out.println("Connection interrupted. Waiting for resumed connection.");
+                    }
                     // Restart loop
                     continue;
                 }
                 // Turn off timer
-                sendSocket.setSoTimeout(0);
+                socket.setSoTimeout(0);
                 // Increment sequence number
                 currSeqNum = (currSeqNum + 1) % Sender.SEQ_NUM_WIN;
                 // End loop
@@ -125,75 +133,104 @@ public class Client implements Sender, Receiver
             System.out.println("Sender IP address: " + clientIP);
             System.out.println("Sender port: " + clientPort);
             System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
-            packetCount++;
         }
-        this.receiveMessage();
-        sendSocket.close();
+//        this.receiveMessage();
+        
+            /* Everything below deals with receiving the message from the server
+               The client receives the message, but can't send an ACK back for some reason
+                ...need to work on that
+            */
+
+            ArrayList<String> incPackets = new ArrayList<String>();
+            rcvData = new byte[1024];
+            DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
+            DatagramPacket sendPkt = null;
+
+            currSeqNum = Receiver.INIT_SEQ_NUM;
+            String totalMsg = "";
+
+            while(true)
+            {
+                System.out.println("Waiting for packet from client " + serverIP.getHostAddress());
+                try {
+                    socket.receive(rcvPkt);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                int rcvpktsize = rcvPkt.getLength();
+                int clientPort = rcvPkt.getPort();
+                String message = new String(rcvPkt.getData());
+                Scanner scan = new Scanner(message);
+                int headerLength = scan.nextLine().length() + 2;
+                int sequenceNum = Sender.getSeqNum(message);
+
+                if(currSeqNum != sequenceNum)
+                {
+                    System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
+                    //Resend previous ACK
+                    System.out.println("Sending ACK for " + currSeqNum + " to " + serverIP + " on port " + clientPort);
+                    String ACK = null;
+                    try {
+                        ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
+                    } catch (UnknownHostException e) {
+                        e.printStackTrace();
+                    }
+                    byte[] sendData = new byte[ACK.length()];
+                    sendData = ACK.getBytes();
+                    sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, clientPort);
+                    try {
+                        socket.send(sendPkt);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    continue;
+                }
+
+                // Increment Sequence Number
+                currSeqNum = (currSeqNum + 1) % Receiver.SEQ_NUM_WIN;
+                incPackets.add(message.substring(headerLength, rcvpktsize));
+
+                // ACKing Packets
+                System.out.println("Sending ACK for " + sequenceNum + " to " + serverIP + " on port " + clientPort + "\n");
+                String ACK = null;
+                try {
+                    ACK = InetAddress.getLocalHost() + Receiver.createACK(sequenceNum);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                byte[] sendData = ACK.getBytes();
+                sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, clientPort);
+                try {
+                    socket.send(sendPkt);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+//                System.out.println(incPackets.get(incPackets.size() - 1));
+
+                if(incPackets.toString().contains("\r\n\r\n\r\n"))
+                {
+                    totalMsg = Receiver.combinePackets(incPackets);
+                    totalMsg = totalMsg.substring(0, totalMsg.length() - 1);
+                    System.out.println("End of messerversage.");
+                    System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
+                    System.out.println("ArrayList item size: " + totalMsg.length() + "\n");
+                    String answer = null;
+                    try {
+                        answer = parseMsg(totalMsg);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    System.out.println("CLI RESPONSE = \n{\n" + answer + "\n}\n");
+
+                    //break;
+                }
+            }
     }
 
     public void receiveMessage() throws Exception
     {
-        this.rcvSocket = new DatagramSocket(portNumber);
-        ArrayList<String> incPackets = new ArrayList<String>();
-        byte[] rcvData = new byte[100];
-        DatagramPacket rcvPkt = new DatagramPacket(rcvData, rcvData.length);
-        DatagramPacket sendPkt = null;
 
-        int currSeqNum = Receiver.INIT_SEQ_NUM;
-        String totalMsg = "";
-
-        while(true)
-        {
-            System.out.println("Waiting for packet from server " + serverIP.getHostAddress());
-            rcvSocket.receive(rcvPkt);
-            int rcvpktsize = rcvPkt.getLength();
-            int serverPort = rcvPkt.getPort();
-            String message = new String(rcvPkt.getData());
-            Scanner scan = new Scanner(message);
-            int headerLength = scan.nextLine().length() + 2;
-            int sequenceNum = Sender.getSeqNum(message);
-            System.out.println("ACK received! Sequence number " + sequenceNum);
-
-            if(currSeqNum != sequenceNum)
-            {
-                System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
-                //Resend previous ACK
-                System.out.println("Sending ACK with sequence number " + currSeqNum + " to " + serverIP + " on port " + serverPort);
-                String ACK = null;
-                ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
-                byte[] sendData = new byte[ACK.length()];
-                sendData = ACK.getBytes();
-                sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
-                rcvSocket.send(sendPkt);
-                continue;
-            }
-
-            //Incremement Sequence Number
-            currSeqNum = (currSeqNum + 1) % Receiver.SEQ_NUM_WIN;
-            incPackets.add(message.substring(headerLength, rcvpktsize));
-
-            // ACKing Packets
-            System.out.println("Sending ACK with sequence number " + sequenceNum + " to " + serverIP + " on port " + serverPort + "\n");
-            String ACK = null;
-            ACK = InetAddress.getLocalHost() + Receiver.createACK(sequenceNum);
-
-            byte[] sendData = ACK.getBytes();
-            sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
-            rcvSocket.send(sendPkt);
-
-            if(incPackets.toString().contains("\r\n\r\n\r\n"))
-            {
-                totalMsg = Receiver.combinePackets(incPackets);
-                totalMsg = totalMsg.substring(0, totalMsg.length() - 1);
-                System.out.println("End of message.");
-                System.out.println("ArrayList total message: \n{\n" + totalMsg + "\n}");
-                System.out.println("ArrayList item size: " + totalMsg.length() + "\n");
-                System.out.println("SRV RESPONSE = \n{\n" + totalMsg + "\n}\n");
-
-                break;
-            }
-        }
-        rcvSocket.close();
     }
 
     /*
@@ -229,17 +266,47 @@ public class Client implements Sender, Receiver
                 break;
             case "QUER":
                 msg += "QUER " + InetAddress.getLocalHost() + "\r\n";
-                System.out.println("Name of file to query?");
+                System.out.println("Name of file to query? (Or type -showall to view entire directory");
                 String input = scan.next();
                 msg += input + "\r\n";
                 break;
             case "EXIT":
                 msg += "EXIT " + InetAddress.getLocalHost() + "\r\n";
-                msg += "$$$$$$$$\r\n";
+                msg += "$$$$$$$$";
                 break;
         }
-        msg += "\r\n\r\n";
+        msg += "\r\n\r\n\r\n";
 
         return msg;
+    }
+
+    private String parseMsg(String totalMsg) {
+        Scanner scan = new Scanner(totalMsg);
+        String code = scan.next();
+        String codeMsg = scan.next();
+        String firstLine = scan.nextLine();
+        String thankYou = "Thank you for your contribution!";
+        String goodbye = "Goodbye!";
+        String songInfo = "";
+        
+        if(code.equals("200") || codeMsg.equals("OK"))
+        {
+            if(firstLine.equals(thankYou))
+                return thankYou;
+            else if(firstLine.equals(goodbye))
+                return goodbye;
+            else
+            {
+                while(scan.hasNext())
+                {
+                    songInfo += scan.nextLine();
+                }
+                return songInfo;
+            }
+        }
+        else
+        {
+            return "An error occured... please try sending request again";
+        }
     }
 }

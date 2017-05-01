@@ -1,0 +1,39 @@
+import java.net.*;
+import java.util.Scanner;
+import java.io.*;
+
+public class TCPClient 
+{
+	   public static void main (String [] args ) throws IOException 
+	   {
+	        int filesize=999999999;
+	        int bytesRead;
+	        int currentTot = 0;
+	        
+	        
+	        System.out.println("Enter destination filename");
+	        Scanner destFile = new Scanner(System.in);
+	        String fileName = destFile.nextLine();
+	        
+	        
+	        Socket socket = new Socket("127.0.0.1",15000);
+	        byte [] bytearray = new byte [filesize];
+	        InputStream is = socket.getInputStream();
+	        FileOutputStream fos = new FileOutputStream(fileName);
+	        BufferedOutputStream bos = new BufferedOutputStream(fos);
+	        bytesRead = is.read(bytearray,0,bytearray.length);
+	        currentTot = bytesRead;
+	        
+	        do 
+	        {
+	        	bytesRead = is.read(bytearray, currentTot, (bytearray.length-currentTot));
+	            if(bytesRead >= 0) currentTot += bytesRead;
+            }
+	        while(bytesRead > -1);
+	        
+	        bos.write(bytearray, 0 , currentTot);
+	        bos.flush();
+	        bos.close();
+	        socket.close();
+	    }
+	}
