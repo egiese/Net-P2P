@@ -56,7 +56,7 @@ public class Peer
     
     public String searchHash(String query)
     {
-        String allFiles = "all_files";
+        String allFiles = "-showall";
         String files = "";
         
         if(query.equals(allFiles))
