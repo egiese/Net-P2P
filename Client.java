@@ -37,6 +37,7 @@ public class Client implements Sender, Receiver
         int timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
 
         int currSeqNum = Sender.INIT_SEQ_NUM;
+        int packetCount = 0;
 
         // Attempt to send pakets via UDP
         for(String p : packets)
@@ -53,7 +54,7 @@ public class Client implements Sender, Receiver
                 System.out.println("Connection interrupted. Waiting for resumed connection.");
             }
 
-            System.out.println("Sending following packet with sequence number " + Sender.getSeqNum(p) + "\n{\n" + p + "\n}\n");
+            System.out.println("Sending following packet " + packetCount + " of " + packets.length + " with sequence number " + Sender.getSeqNum(p) + ", current time out: " + estRTT + "\n{\n" + p + "\n}\n");
             System.out.println("Waiting for ACK...");
 
             // Receiving ACKs
@@ -72,7 +73,7 @@ public class Client implements Sender, Receiver
                 // If timeout
                 catch(SocketTimeoutException e){
                     double endTime = System.nanoTime() / 1000000;
-                    System.out.println("Timeout!");
+                    System.out.println("Timeout! Resending.");
                     // Recalculate timeout interval
                     devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
                     estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
@@ -88,13 +89,13 @@ public class Client implements Sender, Receiver
                     continue;
                 }
                 double endTime = System.nanoTime() / 1000000;
-                System.out.println("ACK received!");
                 //Recalculate timeout interval
                 devRTT = Sender.calcDevRTT(startTime, endTime, estRTT, devRTT);
                 estRTT = Sender.calcEstimatedRTT(startTime, endTime, estRTT);
                 timeoutInterval = Sender.calcTimeoutInterval(estRTT, devRTT);
                 // Check new sequence number
                 int newSeqNum = Sender.getSeqNum(new String(rcvPkt.getData()));
+                System.out.println("ACK received! Sequence number " + newSeqNum);
                 // If incorrect sequence number
                 if(newSeqNum != currSeqNum)
                 {
@@ -129,6 +130,7 @@ public class Client implements Sender, Receiver
             System.out.println("Sender IP address: " + clientIP);
             System.out.println("Sender port: " + clientPort);
             System.out.println("Packet size: " + rcvpktsize + "\n\n\n");
+            packetCount++;
         }
 //        this.receiveMessage();
     }

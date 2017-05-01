@@ -185,12 +185,13 @@ public class Server implements Sender, Receiver
                 Scanner scan = new Scanner(message);
                 int headerLength = scan.nextLine().length() + 2;
                 int sequenceNum = Sender.getSeqNum(message);
+                System.out.println("ACK received! Sequence number " + sequenceNum);
 
                 if(currSeqNum != sequenceNum)
                 {
                     System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
                     //Resend previous ACK
-                    System.out.println("Sending ACK for " + currSeqNum + " to " + clientIP + " on port " + clientPort);
+                    System.out.println("Sending ACK with sequence number " + currSeqNum + " to " + clientIP + " on port " + clientPort);
                     String ACK = null;
                     try {
                         ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
@@ -213,7 +214,7 @@ public class Server implements Sender, Receiver
                 incPackets.add(message.substring(headerLength, rcvpktsize));
 
                 // ACKing Packets
-                System.out.println("Sending ACK for " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
+                System.out.println("Sending ACK with sequence number " + sequenceNum + " to " + clientIP + " on port " + clientPort + "\n");
                 String ACK = null;
                 try {
                     ACK = InetAddress.getLocalHost() + Receiver.createACK(sequenceNum);
