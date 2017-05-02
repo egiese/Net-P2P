@@ -9,6 +9,7 @@ public class Launcher
     public static void main(String[] args) throws Exception
     {
         Scanner scanner = new Scanner(System.in);
+        Scanner tcpScan = new Scanner(System.in);
         String instanceType,serverHostname,slow;
         instanceType = serverHostname = slow = "";
         int port;
@@ -62,7 +63,7 @@ public class Launcher
             String input;
             Client test = new Client(port, serverHostname, slowMode);
             do {
-                System.out.println("What should the " + instanceType + " do?\nInform and update [INUP]\nQuery [QUER]\nExit [EXIT]\nBreak control loop [STOP]");
+                System.out.println("What should the " + instanceType + " do?\nInform and update [INUP]\nQuery [QUER]\nDownload file [DWNL]\nExit [EXIT]\nBreak control loop [STOP]");
                 input = scanner.next().toUpperCase();
                 switch (input) {
                     case "INUP":
@@ -70,6 +71,17 @@ public class Launcher
                         break;
                     case "QUER":
                         test.sendMessage("QUER");
+                        break;
+                    case "DWNL":
+                        System.out.println("Enter host IP address:");
+                        String hostIP = tcpScan.nextLine();
+                        System.out.println("Enter filename, beginning with [\\], including extension:");
+                        String filename = tcpScan.nextLine();
+                        System.out.println("Enter target file's absolute path:");
+                        String targetFP = tcpScan.nextLine();
+                        System.out.println("Enter desired destination path:");
+                        String destFP = tcpScan.nextLine();
+                        test.startTCPClient("TCP Client", hostIP, port+1, targetFP + filename, destFP + filename);        
                         break;
                     case "EXIT":
                         test.sendMessage("EXIT");
