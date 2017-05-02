@@ -335,10 +335,8 @@ public class Client implements Sender, Receiver
                     {
                         byte [] buffer = new byte[1024];
 
-                        DataInputStream is = new DataInputStream(clientSocket.getInputStream());
-//                        InputStream is = clientSocket.getInputStream();
-                        DataOutputStream fos = new DataOutputStream(new FileOutputStream(storeLocation));
-//                        FileOutputStream fos = new FileOutputStream(storeLocation);
+                        InputStream is = clientSocket.getInputStream();
+                        FileOutputStream fos = new FileOutputStream(storeLocation);
 
                         int count;
                         while((count = is.read(buffer)) > 0)
@@ -477,10 +475,8 @@ public class Client implements Sender, Receiver
                                     File transferFile = new File (clientQuery);
                                     byte [] buffer = new byte[1024];
 
-//                                    FileInputStream fin = new FileInputStream(transferFile);
-                                    DataInputStream fin = new DataInputStream(new FileInputStream(transferFile));
-//                                    OutputStream os = clientConnectionSocket.getOutputStream();
-                                    DataOutputStream os = new DataOutputStream(clientConnectionSocket.getOutputStream());
+                                    FileInputStream fin = new FileInputStream(transferFile);
+                                    OutputStream os = clientConnectionSocket.getOutputStream();
 
                                     System.out.println("Sending Files..");
 
