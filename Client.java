@@ -246,7 +246,7 @@ public class Client implements Sender, Receiver
                 break;
             case "QUER":
                 msg += "QUER " + InetAddress.getLocalHost() + "\r\n";
-                System.out.println("Name of file to query?");
+                System.out.println("Name of file to query? Type -showall [-showall] to request entire directory.");
                 String input = scan.next();
                 msg += input + "\r\n";
                 break;

@@ -89,11 +89,10 @@ public class Server implements Sender, Receiver
                     String search = null;
 
                     System.out.println("queryname = " + queryName);
-
                     for(Peer peer : peers)
                     {
                         if(!(search = peer.searchHash(queryName)).equals("File not found"))
-                            queryResponse += search + " " + peer.getHost() + " " + peer.getIP() + "\r\n";
+                            queryResponse += search;
                     }
 
                     if(search.equals("File not found"))
