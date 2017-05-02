@@ -52,6 +52,11 @@ public class Client implements Sender, Receiver
             sendData = p.getBytes();
             DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, portNumber);
 
+            if(slowMode)
+            {
+                Thread.sleep(4000);
+            }
+
             try{
                 sendSocket.send(sendPkt);
             }

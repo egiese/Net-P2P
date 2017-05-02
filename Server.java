@@ -185,7 +185,16 @@ public class Server implements Sender, Receiver
                 Scanner scan = new Scanner(message);
                 int headerLength = scan.nextLine().length() + 2;
                 int sequenceNum = Sender.getSeqNum(message);
-                System.out.println("ACK received! Sequence number " + sequenceNum);
+                System.out.println("Packet received! Sequence number " + sequenceNum);
+
+                if(slowMode)
+                {
+                    try {
+                        Thread.sleep(4000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
 
                 if(currSeqNum != sequenceNum)
                 {
