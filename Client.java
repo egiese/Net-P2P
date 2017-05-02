@@ -202,7 +202,7 @@ public class Client implements Sender, Receiver
             sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
             rcvSocket.send(sendPkt);
 
-            if(incPackets.toString().contains("\r\n\r\n\r\n"))
+            if(Receiver.combinePackets(incPackets).contains("\r\n\r\n\r\n"))
             {
                 totalMsg = Receiver.combinePackets(incPackets);
                 totalMsg = totalMsg.substring(0, totalMsg.length() - 1);

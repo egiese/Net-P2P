@@ -240,7 +240,10 @@ public class Server implements Sender, Receiver
                     e.printStackTrace();
                 }
 
-                if(incPackets.toString().contains("\r\n\r\n\r\n"))
+                String tempMsg = Receiver.combinePackets(incPackets);
+                System.out.println("ArrayList total message: \n{\n" + tempMsg + "\n}");
+
+                if(Receiver.combinePackets(incPackets).contains("\r\n\r\n\r\n"))
                 {
                     totalMsg = Receiver.combinePackets(incPackets);
                     totalMsg = totalMsg.substring(0, totalMsg.length() - 1);
