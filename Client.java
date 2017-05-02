@@ -162,6 +162,11 @@ public class Client implements Sender, Receiver
             int sequenceNum = Sender.getSeqNum(message);
             System.out.println("ACK received! Sequence number " + sequenceNum);
 
+            if(slowMode)
+            {
+                Thread.sleep(4000);
+            }
+
             if(currSeqNum != sequenceNum)
             {
                 System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
