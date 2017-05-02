@@ -333,32 +333,23 @@ public class Client implements Sender, Receiver
                     // Attempt to transfer the file via byteArray and OutputStreams
                     try
                     {
-                        byte [] buffer = new byte[1024];
-
+                        byte [] bytearray = new byte [filesize];
                         InputStream is = clientSocket.getInputStream();
                         FileOutputStream fos = new FileOutputStream(storeLocation);
+                        BufferedOutputStream bos = new BufferedOutputStream(fos);
+                        bytesRead = is.read(bytearray,0,bytearray.length);
+                        currentTot = bytesRead;
 
-                        int count;
-                        while((count = is.read(buffer)) > 0)
+                        do 
                         {
-                            fos.write(buffer, 0, count);
+                                bytesRead = is.read(bytearray, currentTot, (bytearray.length-currentTot));
+                            if(bytesRead >= 0) currentTot += bytesRead;
                         }
-//
-//                        byte [] bytearray = new byte [filesize];
-//                        BufferedOutputStream bos = new BufferedOutputStream(fos);
-//                        bytesRead = is.read(bytearray,0,bytearray.length);
-//                        currentTot = bytesRead;
-//
-//                        do
-//                        {
-//                                bytesRead = is.read(bytearray, currentTot, (bytearray.length-currentTot));
-//                            if(bytesRead >= 0) currentTot += bytesRead;
-//                        }
-//                        while(bytesRead > -1);
-//
-//                        bos.write(bytearray, 0 , currentTot);
-//                        bos.flush();
-//                        bos.close();
+                        while(bytesRead > -1);
+
+                        bos.write(bytearray, 0 , currentTot);
+                        bos.flush();
+                        bos.close();
                         System.out.println("Download complete!");
                     }
                     catch (Exception e)
@@ -378,12 +369,16 @@ public class Client implements Sender, Receiver
             catch (Exception e) 
             {
                 e.printStackTrace();
-            }
-            if(clientSocket != null) {
-                try {
-                    clientSocket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                try 
+                {
+                    if (clientSocket != null) 
+                    {
+                            clientSocket.close();
+                    }
+                } 
+                catch (Exception cse) 
+                {
+                        // ignore exception here
                 }
             }
         }
@@ -472,28 +467,17 @@ public class Client implements Sender, Receiver
                                 try
                                 {
                                     System.out.println("Client query = " + clientQuery);
-                                    File transferFile = new File (clientQuery);
-                                    byte [] buffer = new byte[1024];
-
+                                    File transferFile = new File (clientQuery);	        		
+                                    byte [] bytearray = new byte [(int)transferFile.length()];
                                     FileInputStream fin = new FileInputStream(transferFile);
+                                    BufferedInputStream bin = new BufferedInputStream(fin);
+                                    bin.read(bytearray,0,bytearray.length);
                                     OutputStream os = clientConnectionSocket.getOutputStream();
-
                                     System.out.println("Sending Files..");
-
-                                    int count;
-                                    while((count = fin.read(buffer)) > 0)
-                                    {
-                                        os.write(buffer, 0, count);
-                                    }
-
-//                                    byte [] bytearray = new byte [(int)transferFile.length()];
-//                                    BufferedInputStream bin = new BufferedInputStream(fin);
-//                                    bin.read(bytearray,0,bytearray.length);
-//                                    os.write(bytearray,0,bytearray.length);
-//                                    os.flush();
-//                                    bin.close();
-
+                                    os.write(bytearray,0,bytearray.length);
+                                    os.flush(); 
                                     clientConnectionSocket.close();
+                                    bin.close();
                                     System.out.println("File transfer complete");
                                 }
                                 catch(Exception e)
