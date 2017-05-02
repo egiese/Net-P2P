@@ -1,4 +1,4 @@
-import java.io.File;
+import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -15,6 +15,8 @@ public class Client implements Sender, Receiver
     private DatagramSocket sendSocket;
     private DatagramSocket rcvSocket;
     private boolean slowMode;
+    private TCPServer tcpSrv;
+    private TCPClient tcpCli;
 
     public Client(int portNumber, String receiverHostname, boolean slowMode) throws Exception
     {
@@ -22,6 +24,9 @@ public class Client implements Sender, Receiver
         this.portNumber = portNumber;
         this.serverHostname = receiverHostname;
         this.serverIP = InetAddress.getByName(this.serverHostname);
+        this.tcpSrv = new TCPServer("TCP Server", portNumber + 1);
+        tcpSrv.start();
+        this.tcpCli = null;
     }
 
     public void sendMessage(String msgType) throws Exception
@@ -258,5 +263,252 @@ public class Client implements Sender, Receiver
         msg += "\r\n\r\n";
 
         return msg;
+    }
+    
+    public void startTCPClient(String name, String serverIP, int serverPort, String filepath, String destination)
+    {
+        System.out.println("Starting TCP Client...\n");
+        this.tcpCli = new TCPClient(name, serverIP, serverPort, filepath, destination);
+        tcpCli.start();
+    }
+    
+    /**
+    * Simple client connects sends a sentence periodically and outputs the
+    * response. This is an adaption of the code provided by the Computer
+    * Networking: A Top Down Approach book by Kurose and Ross
+    *
+    * @author Chad Williams
+    * @additions from Mudassar and Elliot
+    */
+    public class TCPClient extends Thread {
+
+        private int serverPort;
+        private String serverIP;
+        private String targetFile;
+        private String storeLocation;
+
+        public TCPClient(String name, String serverIP, int serverPort, String filepath, String destination) 
+        {
+            super(name);
+            this.serverPort = serverPort;
+            this.serverIP = serverIP;
+            this.targetFile = filepath;
+            this.storeLocation = destination;
+        }
+
+        /*
+         * Code to request a file via TCP from a Transient Server (other client)
+         * After a query, the user can inputs the file name, host IP, and filepath (from query),
+         * and a new thread will begin to attempt to transfer the file
+         */
+        @Override
+        public void run() 
+        {
+            Socket clientSocket = null;
+            int filesize=999999999;
+            int bytesRead;
+            int currentTot = 0;
+
+            // Attempt to open socket with the server and write to it
+            try 
+            {
+                String srvResponse;
+                System.out.println("CLIENT opening socket");
+                clientSocket = new Socket(serverIP, serverPort);
+                System.out.println("CLIENT connected to server");
+                DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+                BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+                System.out.println(this.getName() + ": sending '" + targetFile + "'");
+                outToServer.writeBytes(targetFile + '\n');
+                srvResponse = inFromServer.readLine();
+
+                System.out.println(this.getName() + " received from server: " + srvResponse);     
+
+                // Response of 200 means that file was found on the client
+                if(srvResponse.equals("200 OK"))
+                {
+                    System.out.println("Attempting to download file!");
+
+                    // Attempt to transfer the file via byteArray and OutputStreams
+                    try
+                    {
+                        byte [] bytearray = new byte [filesize];
+                        InputStream is = clientSocket.getInputStream();
+                        FileOutputStream fos = new FileOutputStream(storeLocation);
+                        BufferedOutputStream bos = new BufferedOutputStream(fos);
+                        bytesRead = is.read(bytearray,0,bytearray.length);
+                        currentTot = bytesRead;
+
+                        do 
+                        {
+                                bytesRead = is.read(bytearray, currentTot, (bytearray.length-currentTot));
+                            if(bytesRead >= 0) currentTot += bytesRead;
+                        }
+                        while(bytesRead > -1);
+
+                        bos.write(bytearray, 0 , currentTot);
+                        bos.flush();
+                        bos.close();
+                        System.out.println("Download complete!");
+                    }
+                    catch (Exception e)
+                    {
+                            System.out.println("transfer error");
+                            e.printStackTrace();
+                    }
+                }
+                // Otherwise, file not found, so return error
+                else if(srvResponse.equals("404 NOT FOUND"))
+                {
+                    System.out.println("File not found - please a different file or host");
+                }
+                clientSocket.close();
+                System.out.println(this.getName() + " closed connection to server");
+            }
+            catch (Exception e) 
+            {
+                e.printStackTrace();
+                try 
+                {
+                    if (clientSocket != null) 
+                    {
+                            clientSocket.close();
+                    }
+                } 
+                catch (Exception cse) 
+                {
+                        // ignore exception here
+                }
+            }
+        }
+    }
+    
+    
+    /**
+    * Simple TCP server thread that starts up and waits for TCP connections and
+    * echos what is sent capitalized. This is an adaption of the code provided by
+    * the Computer Networking: A Top Down Approach book by Kurose and Ross
+    *
+    * @author Chad Williams
+    * @additions from Mudassar and Elliot
+    */
+    private class TCPServer extends Thread 
+    {
+        private int port;
+
+        public TCPServer(String name, int port) 
+        {
+                super(name);
+                this.port = port;
+        }
+
+        String clientQuery;
+        String answer;
+
+       /*
+        * Code to transfer a file to a client making a request
+        * The client sents the exact filepath through the socket, and the server
+        * returns "200 OK" if the file exists, and "404 NOT FOUND" if not
+        * After the message is sent, if the code was 200, then the server will
+        * begin transferring the file.
+        * Threading supports multiple clients connecting and transferring at the same time
+        */
+        public void run() 
+        {
+            ServerSocket serverSocket = null;
+
+            // Try to open serversocket and begin to listen/accept connections from clients
+            try 
+            {
+                serverSocket = new ServerSocket(this.port);
+
+                while (true) 
+                {
+                    String clientResponse;
+                    System.out.println("TCP SERVER accepting connections");
+                    Socket clientConnectionSocket = serverSocket.accept();
+                    System.out.println("TCP SERVER accepted connection (single threaded so others wait)");
+
+                    // Read the incoming query from a client and extract the filepath
+                    while (clientConnectionSocket.isConnected() && !clientConnectionSocket.isClosed()) 
+                    {
+                        BufferedReader inFromClient = new BufferedReader(new InputStreamReader(clientConnectionSocket.getInputStream()));
+                        DataOutputStream outToClient = new DataOutputStream(clientConnectionSocket.getOutputStream());
+                        clientQuery = inFromClient.readLine();
+                        answer = "500 PROBLEM";
+
+                        // Check if the exact filepath exists on the client, then create msg
+                        try
+                        {
+                            File f = new File(clientQuery);
+                            if(f.exists())
+                                    answer = "200 OK";
+                            else
+                                    answer = "404 NOT FOUND";
+                        }
+                        catch(Exception e)
+                        {
+                              System.out.println("File error");
+                        }
+
+                        // Note if this returns null it means the client closed the connection
+                        if (clientQuery != null) 
+                        {
+                            System.out.println("TCP SERVER Received: " + clientQuery);
+                            clientResponse = answer + '\n';
+                            System.out.println("TCP SERVER responding: " + clientResponse);
+                            outToClient.writeBytes(clientResponse);
+
+                            // Attempt to transfer the file via byteArrays and OutputStreams
+                            if(answer.equals("200 OK"))
+                            {
+                                System.out.println("Server transfering...");
+                                try
+                                {
+                                    System.out.println("Client query = " + clientQuery);
+                                    File transferFile = new File (clientQuery);	        		
+                                    byte [] bytearray = new byte [(int)transferFile.length()];
+                                    FileInputStream fin = new FileInputStream(transferFile);
+                                    BufferedInputStream bin = new BufferedInputStream(fin);
+                                    bin.read(bytearray,0,bytearray.length);
+                                    OutputStream os = clientConnectionSocket.getOutputStream();
+                                    System.out.println("Sending Files..");
+                                    os.write(bytearray,0,bytearray.length);
+                                    os.flush(); 
+                                    clientConnectionSocket.close();
+                                    bin.close();
+                                    System.out.println("File transfer complete");
+                                }
+                                catch(Exception e)
+                                {
+                                    e.printStackTrace();
+                                    System.out.println("Transfer error");
+                                }
+                            }
+                        } 
+                        else 
+                        {
+                            clientConnectionSocket.close();
+                            System.out.println("TCP SERVER client connection closed");
+                        }
+                    }
+                }
+            } 
+            catch (Exception e) 
+            {
+                e.printStackTrace();
+                {
+                    try 
+                    {
+                            serverSocket.close();
+                    } 
+                    catch (IOException ioe) 
+                    {
+                            // ignore
+                    }
+                }
+            }
+        }
     }
 }
