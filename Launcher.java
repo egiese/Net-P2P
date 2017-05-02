@@ -11,6 +11,7 @@ public class Launcher
         Scanner scanner = new Scanner(System.in);
         String instanceType,serverHostname = "";
         int port;
+        Boolean slowMode;
 
         System.out.println("Welcome to the P2P application.");
         do
@@ -34,9 +35,10 @@ public class Launcher
             port = scanner.nextInt();
         } while (port == 0);
 
+
         if(instanceType.equals("server"))
         {
-            Server server = new Server(port);
+            Server server = new Server(port, false);
             server.serve();
         }
         else {

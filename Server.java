@@ -16,14 +16,16 @@ public class Server implements Sender, Receiver
     private DatagramSocket serverSocket;
     private static List<Peer> peers;
     private ArrayList<ClientHandler> currClients;
+    private Boolean slowMode;
 
-    public Server(int portNumber) throws Exception
+    public Server(int portNumber, boolean slowMode) throws Exception
     {
         this.portNumber = portNumber;
         this.serverSocket = new DatagramSocket(portNumber);
         System.out.println("UDP Server opened on port " + this.portNumber);
         currClients = new ArrayList<ClientHandler>();
         peers = new ArrayList<Peer>();
+        this.slowMode = slowMode;
     }
 
     public void serve() throws IOException
@@ -241,7 +243,6 @@ public class Server implements Sender, Receiver
                     }
                     System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
 
-                    currClients.remove(this);
                     break;
                 }
             }
@@ -251,6 +252,7 @@ public class Server implements Sender, Receiver
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            currClients.remove(this);
         }
 
         public void sendMessage(String msg) throws Exception
