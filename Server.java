@@ -168,6 +168,7 @@ public class Server implements Sender, Receiver
             DatagramPacket sendPkt = null;
 
             int currSeqNum = Receiver.INIT_SEQ_NUM;
+            int lastRcvSeqNum = Receiver.INIT_SEQ_NUM + 1;
             String totalMsg = "";
             String answer = null;
 
@@ -200,10 +201,10 @@ public class Server implements Sender, Receiver
                 {
                     System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
                     //Resend previous ACK
-                    System.out.println("Sending ACK with sequence number " + Math.abs(currSeqNum - 1) + " to " + clientIP + " on port " + clientPort);
+                    System.out.println("Sending ACK with sequence number " + lastRcvSeqNum + " to " + clientIP + " on port " + clientPort);
                     String ACK = null;
                     try {
-                        ACK = InetAddress.getLocalHost() + Receiver.createACK(Math.abs(currSeqNum - 1));
+                        ACK = InetAddress.getLocalHost() + Receiver.createACK(lastRcvSeqNum);
                     } catch (UnknownHostException e) {
                         e.printStackTrace();
                     }
@@ -219,6 +220,7 @@ public class Server implements Sender, Receiver
                 }
 
                 // Increment Sequence Number
+                lastRcvSeqNum = currSeqNum;
                 currSeqNum = (currSeqNum + 1) % Receiver.SEQ_NUM_WIN;
                 incPackets.add(message.substring(headerLength, rcvpktsize));
 

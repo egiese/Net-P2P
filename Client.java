@@ -1,3 +1,5 @@
+import com.sun.org.apache.regexp.internal.RE;
+
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
@@ -153,6 +155,7 @@ public class Client implements Sender, Receiver
         DatagramPacket sendPkt = null;
 
         int currSeqNum = Receiver.INIT_SEQ_NUM;
+        int lastRcvSeqNum = Receiver.INIT_SEQ_NUM + 1;
         String totalMsg = "";
 
         while(true)
@@ -176,9 +179,9 @@ public class Client implements Sender, Receiver
             {
                 System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
                 //Resend previous ACK
-                System.out.println("Sending ACK with sequence number " + Math.abs(currSeqNum - 1) + " to " + serverIP + " on port " + serverPort);
+                System.out.println("Sending ACK with sequence number " + lastRcvSeqNum + " to " + serverIP + " on port " + serverPort);
                 String ACK = null;
-                ACK = InetAddress.getLocalHost() + Receiver.createACK(Math.abs(currSeqNum - 1));
+                ACK = InetAddress.getLocalHost() + Receiver.createACK(lastRcvSeqNum);
                 byte[] sendData = new byte[ACK.length()];
                 sendData = ACK.getBytes();
                 sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);
