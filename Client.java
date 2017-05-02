@@ -176,9 +176,9 @@ public class Client implements Sender, Receiver
             {
                 System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
                 //Resend previous ACK
-                System.out.println("Sending ACK with sequence number " + currSeqNum + " to " + serverIP + " on port " + serverPort);
+                System.out.println("Sending ACK with sequence number " + Math.abs(currSeqNum - 1) + " to " + serverIP + " on port " + serverPort);
                 String ACK = null;
-                ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
+                ACK = InetAddress.getLocalHost() + Receiver.createACK(Math.abs(currSeqNum - 1));
                 byte[] sendData = new byte[ACK.length()];
                 sendData = ACK.getBytes();
                 sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, serverPort);

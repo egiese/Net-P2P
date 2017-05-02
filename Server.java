@@ -200,10 +200,10 @@ public class Server implements Sender, Receiver
                 {
                     System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
                     //Resend previous ACK
-                    System.out.println("Sending ACK with sequence number " + currSeqNum + " to " + clientIP + " on port " + clientPort);
+                    System.out.println("Sending ACK with sequence number " + Math.abs(currSeqNum - 1) + " to " + clientIP + " on port " + clientPort);
                     String ACK = null;
                     try {
-                        ACK = InetAddress.getLocalHost() + Receiver.createACK(currSeqNum);
+                        ACK = InetAddress.getLocalHost() + Receiver.createACK(Math.abs(currSeqNum - 1));
                     } catch (UnknownHostException e) {
                         e.printStackTrace();
                     }
