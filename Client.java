@@ -463,6 +463,7 @@ public class Client implements Sender, Receiver
                             // Attempt to transfer the file via byteArrays and OutputStreams
                             if(answer.equals("200 OK"))
                             {
+			    	Thread.sleep(3000);
                                 System.out.println("Server transfering...");
                                 try
                                 {
