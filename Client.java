@@ -14,9 +14,11 @@ public class Client implements Sender, Receiver
     private InetAddress serverIP;
     private DatagramSocket sendSocket;
     private DatagramSocket rcvSocket;
+    private boolean slowMode;
 
-    public Client(int portNumber, String receiverHostname) throws Exception
+    public Client(int portNumber, String receiverHostname, boolean slowMode) throws Exception
     {
+        this.slowMode = slowMode;
         this.portNumber = portNumber;
         this.serverHostname = receiverHostname;
         this.serverIP = InetAddress.getByName(this.serverHostname);
@@ -25,6 +27,7 @@ public class Client implements Sender, Receiver
     public void sendMessage(String msgType) throws Exception
     {
         this.sendSocket = new DatagramSocket();
+        this.slowMode = slowMode;
         byte[] rcvData = new byte[1024];
 
         System.out.println("Attempting to send to " + serverIP);
