@@ -180,6 +180,7 @@ public class Server implements Sender, Receiver
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                queue.clear();
                 int rcvpktsize = rcvPkt.getLength();
                 String message = new String(rcvPkt.getData());
                 Scanner scan = new Scanner(message);
