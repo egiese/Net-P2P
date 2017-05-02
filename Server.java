@@ -16,14 +16,16 @@ public class Server implements Sender, Receiver
     private DatagramSocket serverSocket;
     private static List<Peer> peers;
     private ArrayList<ClientHandler> currClients;
+    private Boolean slowMode;
 
-    public Server(int portNumber) throws Exception
+    public Server(int portNumber, boolean slowMode) throws Exception
     {
         this.portNumber = portNumber;
         this.serverSocket = new DatagramSocket(portNumber);
         System.out.println("UDP Server opened on port " + this.portNumber);
         currClients = new ArrayList<ClientHandler>();
         peers = new ArrayList<Peer>();
+        this.slowMode = slowMode;
     }
 
     public void serve() throws IOException
@@ -87,11 +89,10 @@ public class Server implements Sender, Receiver
                     String search = null;
 
                     System.out.println("queryname = " + queryName);
-
                     for(Peer peer : peers)
                     {
                         if(!(search = peer.searchHash(queryName)).equals("File not found"))
-                            queryResponse += search + " " + peer.getHost() + " " + peer.getIP() + "\r\n";
+                            queryResponse += search;
                     }
 
                     if(search.equals("File not found"))
@@ -178,12 +179,22 @@ public class Server implements Sender, Receiver
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                queue.clear();
                 int rcvpktsize = rcvPkt.getLength();
                 String message = new String(rcvPkt.getData());
                 Scanner scan = new Scanner(message);
                 int headerLength = scan.nextLine().length() + 2;
                 int sequenceNum = Sender.getSeqNum(message);
-                System.out.println("ACK received! Sequence number " + sequenceNum);
+                System.out.println("Packet received! Sequence number " + sequenceNum);
+
+                if(slowMode)
+                {
+                    try {
+                        Thread.sleep(4000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
 
                 if(currSeqNum != sequenceNum)
                 {
@@ -241,7 +252,6 @@ public class Server implements Sender, Receiver
                     }
                     System.out.println("SRV RESPONSE = \n{\n" + answer + "\n}\n");
 
-                    currClients.remove(this);
                     break;
                 }
             }
@@ -251,6 +261,7 @@ public class Server implements Sender, Receiver
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            currClients.remove(this);
         }
 
         public void sendMessage(String msg) throws Exception
@@ -275,6 +286,11 @@ public class Server implements Sender, Receiver
                 byte[] sendData = new byte[p.length()];
                 sendData = p.getBytes();
                 DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, clientIP, portNumber);
+
+                if(slowMode)
+                {
+                    Thread.sleep(4000);
+                }
 
                 try{
                     clientSocket.send(sendPkt);

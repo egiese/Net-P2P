@@ -9,8 +9,10 @@ public class Launcher
     public static void main(String[] args) throws Exception
     {
         Scanner scanner = new Scanner(System.in);
-        String instanceType,serverHostname = "";
+        String instanceType,serverHostname,slow;
+        instanceType = serverHostname = slow = "";
         int port;
+        Boolean slowMode = false;
 
         System.out.println("Welcome to the P2P application.");
         do
@@ -34,14 +36,31 @@ public class Launcher
             port = scanner.nextInt();
         } while (port == 0);
 
+        do
+        {
+            System.out.println("Operate in slow mode? [yes / no]");
+            slow = scanner.next();
+        } while (!(slow.equals("yes") || slow.equals("no")));
+
+        switch (slow)
+        {
+            case "yes":
+                slowMode = true;
+                break;
+            case "no":
+                slowMode = false;
+                break;
+        }
+
+
         if(instanceType.equals("server"))
         {
-            Server server = new Server(port);
+            Server server = new Server(port, slowMode);
             server.serve();
         }
         else {
             String input;
-            Client test = new Client(port, serverHostname);
+            Client test = new Client(port, serverHostname, slowMode);
             do {
                 System.out.println("What should the " + instanceType + " do?\nInform and update [INUP]\nQuery [QUER]\nExit [EXIT]\nBreak control loop [STOP]");
                 input = scanner.next().toUpperCase();

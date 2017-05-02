@@ -14,9 +14,11 @@ public class Client implements Sender, Receiver
     private InetAddress serverIP;
     private DatagramSocket sendSocket;
     private DatagramSocket rcvSocket;
+    private boolean slowMode;
 
-    public Client(int portNumber, String receiverHostname) throws Exception
+    public Client(int portNumber, String receiverHostname, boolean slowMode) throws Exception
     {
+        this.slowMode = slowMode;
         this.portNumber = portNumber;
         this.serverHostname = receiverHostname;
         this.serverIP = InetAddress.getByName(this.serverHostname);
@@ -25,6 +27,7 @@ public class Client implements Sender, Receiver
     public void sendMessage(String msgType) throws Exception
     {
         this.sendSocket = new DatagramSocket();
+        this.slowMode = slowMode;
         byte[] rcvData = new byte[1024];
 
         System.out.println("Attempting to send to " + serverIP);
@@ -48,6 +51,11 @@ public class Client implements Sender, Receiver
             byte[] sendData = new byte[p.length()];
             sendData = p.getBytes();
             DatagramPacket sendPkt = new DatagramPacket(sendData, sendData.length, serverIP, portNumber);
+
+            if(slowMode)
+            {
+                Thread.sleep(4000);
+            }
 
             try{
                 sendSocket.send(sendPkt);
@@ -154,6 +162,11 @@ public class Client implements Sender, Receiver
             int sequenceNum = Sender.getSeqNum(message);
             System.out.println("ACK received! Sequence number " + sequenceNum);
 
+            if(slowMode)
+            {
+                Thread.sleep(4000);
+            }
+
             if(currSeqNum != sequenceNum)
             {
                 System.out.println("Wrong sequence number.\nExpected " + currSeqNum + " got " + sequenceNum + ".");
@@ -233,7 +246,7 @@ public class Client implements Sender, Receiver
                 break;
             case "QUER":
                 msg += "QUER " + InetAddress.getLocalHost() + "\r\n";
-                System.out.println("Name of file to query?");
+                System.out.println("Name of file to query? Type -showall [-showall] to request entire directory.");
                 String input = scan.next();
                 msg += input + "\r\n";
                 break;

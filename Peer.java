@@ -64,7 +64,7 @@ public class Peer
             for(int i = 0; i < numEntries; i++)
             {
                 for(String song : hashMap[i])
-                    files += song + "\r\n";
+                    files += song + " " + hostname + " " + IPAddress + "\r\n";
             }
             return files;
         }
@@ -79,7 +79,7 @@ public class Peer
 	                	songScan = new Scanner(song);
 	                	String fileName = songScan.next();
 	                    if(fileName.contains(query))
-	                    	return song;
+	                    	return song + " " + hostname + " " + IPAddress + "\r\n";
 	    			}
             	}
 	            catch(Exception e)
