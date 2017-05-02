@@ -219,8 +219,12 @@ public class Client implements Sender, Receiver
         {
             case "INUP":
                 msg += "INUP " + InetAddress.getLocalHost() + "\r\n";
-                System.out.println("Please enter the absolute path of the sharing folder.");
-                File folder = new File(scan.nextLine());
+                File folder;
+                do
+                {
+                    System.out.println("Please enter the absolute path of the sharing folder.");
+                    folder = new File(scan.nextLine());
+                } while(!folder.isDirectory());
                 File[] sharedFiles = folder.listFiles();
 
                 for(File file : sharedFiles)
